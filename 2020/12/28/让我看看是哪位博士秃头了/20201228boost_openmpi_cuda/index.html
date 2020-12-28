@@ -9,7 +9,7 @@
 
 
 
-<title>广州之行 | Writing the future</title>
+<title>boost_openmpi_cuda | Writing the future</title>
 
 
 
@@ -296,11 +296,73 @@
             <div class="container">
     
     
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
 
     
     <article class="post-wrap">
         <header class="post-header">
-            <h1 class="post-title">广州之行</h1>
+            <h1 class="post-title">boost_openmpi_cuda</h1>
             
                 <div class="post-meta">
                     
@@ -309,14 +371,14 @@
 
                     
                         <span class="post-time">
-                        Date: <a href="#">2019/05/07&nbsp;&nbsp;20:07</a>
+                        Date: <a href="#">2020/12/28&nbsp;&nbsp;15:17</a>
                         </span>
                     
                     
                         <span class="post-category">
                     Category:
                             
-                                <a href="/categories/随笔/">随笔</a>
+                                <a href="/categories/让我看看是哪位博士秃头了/">让我看看是哪位博士秃头了</a>
                             
                         </span>
                     
@@ -325,11 +387,39 @@
         </header>
 
         <div class="post-content">
-            <p>一直很难从广州之行回味过来。就像大学一样，会有聊不完的天，会有卧谈会，大家的想法也变成熟了许多，但是还是有个别室友不接受新的事物，在大学如此，当公务员了亦是如此，但是又特别想融入这个大环境，时常跟我们讲，想要追求的妹子不太接受他，但是从言语之中，其实我们也很难接受他。</p>
-<p>但是像小w同学就感觉越来越健谈了，以前是，现在愈发健谈了，研究生三年除了搞科研，没忘记经常撩妹子呀，撩天技能max。记得大学的时候，每次出行都是他最先抱怨的，只要他不感兴趣的东西，就一直在说，带给大家不好的情绪，但是每次出行又是他提出来的，但是现在似乎变得不那么焦躁了，可能是因为是到他的地盘来玩耍，必须不能又脾气吗？hhhh,谁知道呢。以前他总是吐槽别人，觉得正常穿搭就ok了，现在却也想在仪表上修饰一下了呢，还会让小f室友帮他参谋一下衣服，可真是让人吃鲸！</p>
-<p>而我，却变得不善言辞了，以前很爱开玩笑，现在感觉话语少了许多，不太爱说话了，是对这个世界没啥感觉了吗？允悲~😫</p>
-<p>小f同学不用说了，以前就很优秀，现在变得更优秀了，皮肤白的女生看到想杀人，不过心境开阔多了，记得大学谈到自己表白失败，感觉心里还是会有点芥蒂，但是现在基本看开了，有的时候也会自嘲一下自己年轻的时候不懂事。</p>
-<p>尽管时间过得很快，但是这三天感觉很满足，甚至开始怀念，怀念以往无话不说的日子，倒有点今宵别梦寒的凄凉。</p>
+            <h3 id="boost安装">boost安装</h3>
+<ol>
+<li>安装boost库</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ sudo apt-get install libboost-all-dev</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>boost测试文件test.cpp</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;boost/lexical_cast.hpp&gt;</span><br><span class="line">#include &lt;iostream&gt;</span><br><span class="line">int main()</span><br><span class="line">&#123;</span><br><span class="line">        using boost::lexical_cast;</span><br><span class="line">        int a = lexical_cast&lt;int&gt;(&quot;123&quot;);</span><br><span class="line">        double b = lexical_cast&lt;double&gt;(&quot;123.12&quot;);</span><br><span class="line">        std::cout&lt;&lt;a&lt;&lt;std::endl;</span><br><span class="line">        std::cout&lt;&lt;b&lt;&lt;std::endl;</span><br><span class="line">        return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>运行test.cpp</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ g++ test.cpp -o test.out</span><br></pre></td></tr></table></figure>
+<ol start="4">
+<li>执行test.out</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ ./test.out</span><br></pre></td></tr></table></figure>
+<h3 id="openmpi和mpich安装">openmpi和mpich安装</h3>
+<ol>
+<li>openmpi安装</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ sudo apt-get install openmpi-bin openmpi-doc libopenmpi-dev</span><br><span class="line"></span><br><span class="line">装好后查询版本</span><br><span class="line">$ mpirun --version</span><br><span class="line">mpirun (Open MPI) 1.10.2</span><br><span class="line">$ mpiexec --version</span><br><span class="line">mpiexec (OpenRTE) 1.10.2</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>mpich安装<br>
+请先确保下面三个软件已安装<br>
+$ gcc --version<br>
+$ g++ --version<br>
+$ python --version</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ sudo apt-get install mpich</span><br><span class="line"></span><br><span class="line">装好后查询版本</span><br><span class="line">$ which mpicc</span><br><span class="line">$ which mpiexec</span><br></pre></td></tr></table></figure>
+<h3 id="cuda安装">cuda安装</h3>
+<p>到官方网页，根据不同的操作系统下载.run文件，按官网操作进行。但请注意，只装cuda-toolkit就可以了，其他的都取消勾选。（注:如果是新系统没有装nvidia驱动，那么可以通过这种方式进行驱动的安装）<br>
+<a href="https://developer.nvidia.com/zh-cn/cuda-downloads" target="_blank" rel="noopener">https://developer.nvidia.com/zh-cn/cuda-downloads</a></p>
 
         </div>
 
@@ -347,6 +437,10 @@
                 <span>Tag(s):</span>
                 <span class="tag">
                     
+                    
+                        <a href="/tags/Ph-D/"># Ph.D.</a>
+                    
+                        
                 </span>
             </div>
             <div>
@@ -357,10 +451,8 @@
         </section>
         <section class="post-nav">
             
-                <a class="prev" rel="prev" href="/2019/05/18/随笔/20190518闲记二三事/">闲记二三事</a>
             
-            
-            <a class="next" rel="next" href="/2019/05/07/随笔/20190507《long vacation》观后感/">《long vacation》观后感</a>
+            <a class="next" rel="next" href="/2020/12/27/随笔/20201227想唱就唱啊唱得响亮/">想唱就唱啊唱得响亮</a>
             
         </section>
 
