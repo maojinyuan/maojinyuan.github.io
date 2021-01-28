@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>环氧树脂应用技术开发动向 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">环氧树脂应用技术开发动向</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2019/09/18&nbsp;&nbsp;17:16</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/让我看看是哪位博士头秃了/">让我看看是哪位博士头秃了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>环氧树脂技术开发动向向高性能化、高附加值发展，重视环境保护和生产的安全性。特殊结构环氧树脂和助剂产品向着精细化、功能化、能在特殊环境下固化发展。固化产物具有高韧性、高强度、耐辐照、耐高低温方向发展。由此特种树脂、固化剂、稀释剂的品种将会有更大发展，形成多品种小批量的生产格局。随着高分子物理学近期的发展，品种的发展已集中于采用化学或非化学合成的方法，通过共混、合金的手段来制得环氧-橡胶、环氧-热塑性塑料、各种有机无机的填充料复合物以及环氧树脂基无机纳米复合材料。</p>
+<p>①涂料<br>
+环氧涂料的发展趋势是降低话染、提高质量和安全性、开拓功能住。重点开发罐用涂料t防腐涂料、功能性涂料和环保型涂料及其推广应用。特别是其中水性环氧体系的品种开发和质量提高，将会在汽车工业(如电泳涂料)、家电行业、食品行业(如罐用涂料)、化学工业(如防腐涂料)、建筑行业(如地坪涂料、建筑胶黏剂、环氧砂浆及混凝土)等应用领域获得突破性进展。</p>
+<p>②电子材料<br>
+随着电子设备向小型化、轻量化、高性能化和高功能化的发展，电子器件也相应向高集成化、薄型化、多层化方向发展，因此要求提高环氧封装材料和覆铜扳的耐热性、介电性能和韧性，降低吸水性和内应力。当前开发的重点是高纯度、高耐热性、低吸水性和高韧性的环氧树脂和固化剂。例如在环氧树脂和固化剂中引入案、双环戊二烯、联苯、联苯醚、芴等骨架可大大提高环氧固化物的耐部件和电性能，降低明水率。此外、开演阴燃环气体系的研究开发也引起园内外的极大关注。</p>
+<p>③高性能环氧复合材料<br>
+高性能环氧复合材料的研究重点是提高耐湿热性、冲击后压缩强度及层间力学性能。为了提高耐湿热性，正如同环氧电子材料那样，可向环氧树脂和固化剂中引入荼、双环戊二烯、联苯、联苯醚、苗等骨架。为了提高冲击后压缩强度和居间力学性能，可采用提高环氧固化物断裂韧性的方法，通常是在环氧树脂中加入橡胶或耐热性热塑性树脂，形成海岛结构或互穿网络结构的多相体系。</p>
+<p>④防火性环氧材料<br>
+恶性火灾的不断发生使人们逐渐认识到材料仅具有阻燃性还远远不能达到防止火灾的目的。对飞机材料率先提出应具有防火性要求，即具有难燃(阻燃)、少烟、低毒(产生的气体毒性小)、低热释放率等性能要求。防火性环氧材料的研制开发，不仅对航空、航天，而且对车辆、船舶、家电、高层及公共场</p>
+<p>⑤液晶环氧树脂<br>
+液晶环氧树脂是一种高度分子有序、深度分子交联的聚合物网络，它融合了液晶有序与网络交联的优点，与普通环氧树脂相比，其耐热性、耐水性和耐冲击性都大为改善，可以用来制备高性能复合材料；同时，液晶环氧树脂在取向方向上线膨胀系数小，而且其介电强度高、介电损耗小，可以使用在高性能要求的电子封装领域，是一种具有美好应用前景的结构和功能材料，受到国内外的重视。<br>
+液晶环氧树脂的研究开始较晚，尚不成熟。从理论角度而言，固化工艺对固化过程中体系有序度的影响是值得深入研究的一个问题。初始反应体系的相态可以影响反应速度，而反应速度的快慢也影响到固化树脂的有序度，需要有确切的有序度和交联度的数据，目前尚未解决。从性能研究和开发角度而言，尚未有系统地表征液晶环氧树脂力学和电性能的报道，同时，利用液晶环氧树脂对普通环氧树脂进行改性是实现环氧树脂高性能化的一个可行途径，具有重要的应用价值。</p>
+<p>⑥环氧树脂无机纳米复合材料<br>
+纳米材料和纳米复合材料是近20年来迅速发展起来的一种新型高性能材料，是当今新材料研究中活力最大、对未来经济和科技发展有十分重要影响的领域。日本把它列为材料科学四大研究任务之一，美国“星球大战”、欧洲“尤里卡”计划均将它列为重点项目，我国在攀登计划中也设立了纳米材料学科组。纳米材料是一种超细粒子材料，其粒径为1-l00mm。因此，它的比表面积很大，表面能很高，表面原子严重配位不足，具有很强的表面活性和超强吸附能力。并具有常规材料所不具有的特殊性能，如体积效应、量子尺寸效应、宏观量子隧道效应和介电限域效应等。从而使纳米材料具有微波吸收性能、高表面活性、强氧化性、超顺磁性等，以及特殊的光学性质、催化性质、光催化性质、光电化学性质、化学反应性质、化学反应动力学性质及特殊的物理机械性质。纳米材料的应用将是传统材料，尤其是功能材料的一次革命。纳米材料用于复合材料中也将使复合材料的发展产生难以预料的巨大变化。纳米复合材料(nanocomposite)可分为两大类，一类是由金属/陶瓷、金属/金属、陶瓷/陶瓷组成的无机纳米复合材料；另一类是由聚合物/无机、聚合物/聚合物组成的聚合物纳米复合材料。聚合物纳米复合材料的研究起步较晚，但近2-3年发展相当迅速。用于环氧树脂纳米复合材料的无机纳米材料有Si0H<sub>2</sub>、Ti0<sub>2</sub>、Al<sub>2</sub>O<sub>3</sub>、CaCO<sub>3</sub>、ZnO、黏土等。初步研究结果表明，纳米材料能大大提高环氧复合材料的力学性能、耐热性、韧性、抗划痕能力等性能，能同时达到提高耐热性和韧性的效果。当前环氧纳米复合材料的研究重点是纳米材料在基体中均匀分散的方法；复合方法、复合效应、复合规律和复合机理的研究；环氧纳米复合材料的应用研究。纳米材料和技术为环氧涂料、胶粘剂、电子材料、塑料、复合材料和功能材料的发展增添了高科技含量，开辟了一条新的途径，必将使环氧材料的发展和应用产生巨大的变化。</p>
+<p>⑦蔗糖基环氧单体和环氧化合物<br>
+两组蔗糖基环氧单体，命名为环氧烯丙基蔗糖(EAS)和环氧丁烯基蔗糖(ECS)，分别由辛烷氧基辛丙基蔗糖(OAS)和辛烷氧基丁烯基蔗糖(OCS)环氧化制备。合成和结构特性研究表明，新型环氧单体是结构同分异构体和非对称异构体构成的混合物，每个蔗糖分子上含有各不相同数量的环氧基。EAS和ECS可制备成平均每个蔗糖分子含1至8个环氧基的环氧化合物。<br>
+二乙烯三胺（DETA）固化的蔗糖基环氧聚合物大约在320 ℃开始降解，它可粘接铝材、玻璃和钢材。相对搭接抗剪试验（ASTMD1002 94）表明，DETA固化环氧烯丙基蔗糖，每个蔗糖分子平均3.2个环氧基团（EAS-3.2），其固化物与双酚A二缩水甘油醚相比属于弹性粘接，而DETA固化ECS-7.3性能比DGEBA和EAS-3.2都好。所有蔗糖基环氧都可以交联固化且溶于水、二甲基甲酰胺、四氢呋喃、丙酮和二氯甲烷。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/Ph-D/"># Ph.D.</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2019/09/23/随笔/20190923拥有“向下兼容能力”的人/">拥有“向下兼容能力”的人</a>
+            
+            
+            <a class="next" rel="next" href="/2019/05/18/随笔/20190518闲记二三事/">闲记二三事</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:30px;padding:10px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>
