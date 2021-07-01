@@ -296,6 +296,68 @@
             <div class="container">
     
     
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
 
     
     <article class="post-wrap">
@@ -405,6 +467,39 @@ _________…<br>
 扔进黄昏，<br>
 林子里传来<br>
 鸟的赞美…</p>
+</blockquote>
+<h3 id="20210701补">20210701补</h3>
+<blockquote>
+<p>今夜的月<br>
+独独不照向我<br>
+_________<br>
+…………<br>
+《______》琼林</p>
+</blockquote>
+<p>关于这首诗，我觉得有些人补的挺好的，此处奉上：</p>
+<p>@后台老哥</p>
+<blockquote>
+<p>隐隐轻抚我的<br>
+是微风</p>
+</blockquote>
+<p>@Notmy</p>
+<blockquote>
+<p>昨夜的酒<br>
+滴滴刺痛着我<br>
+月起时，原来是你<br>
+酒醒后，缘来似你<br>
+《静夜》</p>
+</blockquote>
+<p>@长得牙碜</p>
+<blockquote>
+<p>我的目光<br>
+偏偏渴望着你<br>
+《想你》</p>
+</blockquote>
+<p>@六六家小六</p>
+<blockquote>
+<p>唉!<br>
+连影子都不愿意陪我了</p>
 </blockquote>
 
         </div>
