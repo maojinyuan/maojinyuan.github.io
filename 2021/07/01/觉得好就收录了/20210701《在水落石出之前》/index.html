@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>《在水落石出之前》 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">《在水落石出之前》</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2021/07/01&nbsp;&nbsp;20:42</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>因为“流调”，想到了一个跟“流调”有关的日本故事。</p>
+<p>一位四十九岁的警察，向自己上班的警局自首：“我把我太太杀了，在三天前。”</p>
+<p>他本来有个幸福的三口之家，不料十几年前，儿子患白血病，在骨髓库里排队等待移植，这位警察自己也登记了捐赠。但没有等到匹配的骨髓，儿子就去世了。</p>
+<p>若干年后，妻子又患上阿尔茨海默病，他照顾多年。妻子偶尔意识清醒，请丈夫帮自己解脱。丈夫答应了。</p>
+<p>现场有一幅他写的字：人生五十年。</p>
+<p>案子并不复杂，但办案的检察官、法官有几个问题：他为什么不自杀？为什么过了三天才自首，这三天他去哪里了？还有，“人生五十年”是什么意思？</p>
+<p>先說第一个问题：妻亡子殁，生无可恋。</p>
+<p>他的罪虽不至于被判死刑，但必定要服刑。狱中生涯十分难熬，出狱之后又会面临生活问题，何必呢？</p>
+<p>第二个问题，不论法官、检察官如何问他，他都说：“那三天出去走了走。”</p>
+<p>案子宣判后，他就入狱服刑。</p>
+<p>监狱长见他第一面，就知道此人怀了必死之心。因此，他格外平静，身体上的劳累痛苦、精神上的屈辱伤害，全淡然置之，心如死水。</p>
+<p>那么，他为什么还要服刑呢？或者，他准备哪一天去死呢？想到他写的那幅字，监狱长判断会是他五十岁生日那一天。</p>
+<p>所有人觉得，重点就在于失踪的那三天他究竟干什么了。于是，他在服刑，其他人就在“流调”。</p>
+<p>找火车票、找他去过的酒店、找他吃过饭的小拉面馆，大家茫无头绪。</p>
+<p>一年后，他五十岁生日的那一天，一个访客前来探监。</p>
+<p>在探监人员关系上，写着：父子。可是他的儿子十多年前就身亡了。</p>
+<p>一见面，真相大白。</p>
+<p>原来，多年前，他的儿子没有等到匹配的骨髓，但他的骨髓找到了匹配者。</p>
+<p>当时他并不知道受捐者是谁，但他利用自己的关系，千方百计找到了。受捐者已经长大，在一家拉面店打工。</p>
+<p>在杀害妻子之后，他就去了那家拉面店，沉默地吃完一碗拉面，看了看这个因他儿子而得救的少年。</p>
+<p>而他为何苟活呢？</p>
+<p>因为捐赠骨髓者，年纪最大不能超过五十岁。他活着，说不定在五十岁之前，还能再捐一次，还有可能再救一个人。之后，他就可以心安理得地去死了。</p>
+<p>少年虽然与他只有一面之缘，但总觉得他是有莫大缘分的人，对他念念不忘。</p>
+<p>直到警察调查到少年那里，给他看照片，他一眼就认了出来。少年自己查了前后的新闻，将整个故事连缀起来。</p>
+<p>此刻，少年对他说：“你就是我的父亲，请你为我活下去。”</p>
+<p>他无声地哭了，但什么也没说。</p>
+<p>(该故事出自横山秀夫的《半落》。“半落”是警界术语：水落石出是指真相大白，半落是还有隐藏的真相没有显露。)</p>
+<p><strong><div align="right">——微信公众号“作家叶倾城”</div></strong></p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2021/07/01/觉得好就收录了/20210701一张有意思的图/">一张有意思的图</a>
+            
+            
+            <a class="next" rel="next" href="/2021/07/01/觉得好就收录了/20210701过我眼，即我有/">过我眼，即我有</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>音乐分类 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">音乐分类</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2019/12/21&nbsp;&nbsp;14:10</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/随笔/">随笔</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h3 id="写在前面的话">写在前面的话</h3>
+<p>在*音上看到一个人推的音乐视频，近40年的主打歌，我似乎都听过，仔细想想，似乎对于音乐类型依然不懂，近些天沉迷于崔健的《一无所有》，突发奇想说来编辑这么一个文章，收集下关于音乐方面的知识，也当是从表面的&quot;听&quot;音乐到更深层次的&quot;读&quot;音乐。每种音乐类型的简单介绍主要包括：1. 起源; 2. 主要使用的乐器; 3. 有哪些知名的艺人（如有，包括曲风的开创者）。20191221记</p>
+<p>为了写这篇文章，除了在网上搜索一些既定内容，我还特地买了几本相关的书籍，不说详尽每个类型，但求罗列到每个类型的发展过程以及重要的代表人物，这里非常感谢王硕和储智勇编写的《如何假装懂音乐》，一本乍看一眼标题觉得很水的书，但实际上书的前半部分逻辑线还是比较清晰的，有可圈可点之处。作者从音乐起源（基督教音乐）开始讲，然后阐述了是怎么发展到现在的这么多流派的音乐。为此，我决定将已写好的部分后续的行文结构重新整理一下。20201101记</p>
+<p>续：在此期间我看了Rolling Stone Magazine(滚石杂志)的一些内容，觉得下文略显肤浅，乃至于不能够完全列出出一个音乐类型的完整剖析，还有待多阅读、多了解，慢慢补充。20201107记</p>
+<p>突发奇想，觉得关于“民谣”部分得写得符合它朴实无华、“闷骚”的气质，再加上民谣太受我待见了，遂决定不再用刻板的条条框框来叙述，想到哪儿写到哪吧。20210314记</p>
+<h3 id="音乐类型和音乐形式"><strong>音乐类型和音乐形式</strong></h3>
+<blockquote>
+<ul>
+<li>音乐类型 (Music genre)<br>
+也称音乐流派，是对于音乐作品归属的传统性分类。</li>
+<li>音乐形式 (Musical form)<br>
+指构成各种乐曲的形式，也可以简称为曲式。</li>
+</ul>
+</blockquote>
+<p>音乐类型和音乐形式并不相同，但是在现实中有时会混用，本文只收取音乐类型的相关知识。</p>
+<h4 id="1-基督教音乐-christian-music">1. 基督教音乐 (Christian music)</h4>
+<p>如果要追溯源头，今天几乎所有的音乐风格都可以追溯到基督教音乐, 音乐之所以能流传下来，是因为它有用。被谁所用？被基督教所用。用来干啥？用来传教。基督教音乐发展到现在主要分为两派，一派是有乐器伴奏的，管风琴就是最重要的基督教音乐乐器之一，我们熟知的巴赫就写过大量的管风琴乐曲，但大部分是教会通过&quot;花钱&quot;的形式约的稿。另一派则是无乐器伴奏的，因为那些崇尚根源的教徒认为《圣经》中没有提到乐器的事儿，所以就不应该有，所以那些教堂里的音乐通常没有伴奏，只有咏唱。</p>
+<h4 id="2-福音音乐-gospel-music">2. 福音音乐 (Gospel music)</h4>
+<p>说完基督教音乐, 那必然接下来要说的就是福音音乐了。福音音乐的历史可以追溯到美国人买非洲黑人当奴隶的年代，为了方便和主人交流，黑人得学习语言啊，教材来自哪儿？基督教音乐！但是后面黑人发展出了自己的、带点口音的演唱风格，黑人老哥们管它叫“福音”。福音音乐是一种没有乐器演奏的基督教音乐, 是不是和上面说的无乐器伴奏有点像？那就对了，本来父系就是基督教音乐。但是当时的实际原因并不是崇尚根源，而是因为黑人没钱买不起乐器，就算是主人淘汰下来的也不会给他们，所以他们只能自己打节拍加清唱，这种演唱方式其实说白了就是现在流行的阿卡贝拉 (A Cappella)。我最早应该是在油管上看到有人这么玩，但是并不知道这就是阿卡贝拉，后面在音乐综艺节目《最美和声》里面听到一个组合用这种方式演绎，才明白这就是阿卡贝拉，蛮有趣的一种演奏方式。</p>
+<p>这里还值得提到的一点是尽管福音音乐属于黑人的音乐，但是广为传唱的一首福音音乐《Amazing Grace》是一个叫牛顿的白人写的。当然不是被苹果砸到的那个艾萨克·牛顿（Isaac Newton），而是另外一个诗人兼牧师的约翰·牛顿（John Newton），这老哥就有意思了：他，，，贩卖黑人。在成为诗人和牧师前，23岁那年在海上遭遇海难，尽管他完全不相信上帝，但还是象征性地祈祷了一下，没想到还真成功躲过了海难，然后就“改邪归正”了，在48岁那年，写下了著名的《Amazing Grace》，中文译作《奇异恩典》，当然他只写了词，没有谱曲，或者说不是现今听到的版本。本人非常喜欢新西兰跨界女高音海莉·薇思特拉(Hayley Westenra)之美声唱法，当然也有可能是先入为主的观念，日剧《白色巨塔》的影响对本人颇为深远，其中对话及这首插曲永生难忘，不夸张地说，极大程度上影响了我人生中的重要抉择和看待问题的态度。《如何假装懂音乐》一书中作者则推荐了美国乡村老炮约翰尼·卡什（Johnny Cash）演唱的版本，因为这是他唱给已故哥哥的，对这位哥哥，他有着特殊的感情，因为是小时候玩大锯扯大锯的时候不小心把哥哥锯死的，所以可能比较有代入感。另外，这首歌全世界公认最知名的版本可能当属于马哈利亚·杰克逊（Mahalia Jackson），她有一个外号叫“福音女皇”，足见她在整个福音音乐行业的地位。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Hayley%20Westenra%20-%20Amazing%20Grace.mp3" controls="controls"></audio><br>
+Hayley Westenra - Amazing Grace</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Johnny%20Cash%20-%20Amazing%20Grace.mp3" controls="controls"></audio><br>
+Johnny Cash - Amazing Grace</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Mahalia%20Jackson%20-%20Amazing%20Grace.mp3" controls="controls"></audio><br>
+Mahalia Jackson - Amazing Grace</center>
+<p>既然说到马哈利亚·杰克逊，那我们就得简单聊几句马丁·路德·金（Martin Luther King, Jr.），她很崇拜金先生，自然也没少帮忙，经常为金先生的演讲担任暖场嘉宾，1963年8月的一天，金先生演讲快要结束的时候，她抛出一句话：“跟他们说说咱的梦想”，金先生听完放下了自己手中的稿纸，开始了freestyle，即流传至今的《I have a dream》，这么看来，金先生当之无愧freestyle鼻祖。在嘻哈文化中，的确有一个说法，《I have a dream》是世界上第一段freestyle。</p>
+<h4 id="3-蓝调-布鲁斯-blues-和-节奏蓝调-rhythm-and-blues-r-b">3. 蓝调/布鲁斯 (Blues) 和 节奏蓝调 (Rhythm and blues, R&amp;B)</h4>
+<p>福音音乐讲完，得说说它的亲戚Blues了。这两种音乐都是黑人的音乐，福音音乐唱圣经，Blues唱生活。Blues起源于过去美国黑人奴隶的灵魂乐、赞美歌、劳动歌曲、叫喊和圣歌，是一种基于五声音阶的声乐和乐器音乐，但这么说也不准确，因为所有Blues很注重自我情感的宣泄和原创性或即兴性。Blues起源很早，但是由于当时黑人的识字率低，记录不完全，直到20世纪Blues这个词才在几本歌谱里有出现。值得一提的是，最早的Blues就是黑人音乐，而白人音乐则被称为“乡村音乐”。受此影响，当时大多数人并没有意识到Blues对后来全世界音乐发展史的重要意义，所以保存下来的作品非常少，美国国会图书馆民歌档案馆倒是保存有一些录音，可以这么说，20世纪20年代之前，Blues中诞生的明星寥寥无几。</p>
+<p>直到N年后，涅槃乐队(Nirvana)翻唱了一首《When Did You Sleep Last Night?》，才让世人感受到了Blues的魅力，也记住了Lead Belly(外号 “铅肚”)这个名字，尽管这首歌在铅肚的专辑里叫《In the Pines》。近些年，一位钟玉凤的琵琶演奏家和Blues歌手陈思铭合作了一张专辑《蓝·掉》，其中就有这首《In the Pines》。她们的初衷是想探索下东西方文化的融合，使用了两种耳熟能详的乐器：吉他和琵琶。因为这两种乐器都起源于一种叫“鲁特琴”的乐器，在西方发展成了吉他，而在东方则发展成了琵琶。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Nirvana%20-%20Where%20Did%20You%20Sleep%20Last%20Night.mp3" controls="controls"></audio><br>
+Nirvana - Where Did You Sleep Last Night</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Lead%20Belly%20-%20In%20The%20Pines.mp3" controls="controls"></audio><br>
+Lead Belly - In The Pines</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/%E9%92%9F%E7%8E%89%E5%87%A4%E3%80%81%E9%99%88%E6%80%9D%E9%93%AD%20-%20%E9%A3%8E%E5%85%A5%E6%9D%BE.mp3" controls="controls"></audio><br>
+钟玉凤、陈思铭 - 风入松</center>
+<p>在二战前，Blues界的明星还得提下罗伯特·约翰逊(Robert Johnson)，号称&quot;三角洲之王&quot;(King of Delta Blues)，他和现代歌星走的路线不太一样，他喜欢先巡演，然后出专辑，不过他和许多摇滚明星一样，也是死于27岁，这么说来，他算是27俱乐部里的长辈。尽管他是Blues界早期的明星，但是他在演出的时候基本上是观众喜欢什么，他就演什么，而不仅仅限于Blues。后来的两次录音机会，留下了一些被后世认为听起来十分Blues的音乐。插播一曲，这哥们每到一个地方巡演，都会发展一个“女战友”，所以有传言是他是发展了太多“战友”，被“战友”的老公用酒毒死的。</p>
+<p>Blues第二次流行要来到20世纪50年代了，和第一次流行一样，都是在农村种地不怎么挣钱的黑人去城里打工，对这种音乐有需求才流行起来的。在二战前，黑人做的音乐都会被贴上“种族音乐”(race music)的标签，后来黑人的消费市场大了，有意见了，白人也觉得这样有点欺负人，于是商人就给这些唱片起了另外一个名字，就是我们现在耳熟能详的R&amp;B(Rythm &amp; Blues, 节奏蓝调)，该术语实际上是由美国Billboard于1940年代末所提出的，一方面，黑人老哥喜欢自称自己的音乐为Blues，另一方面，因为黑人的节奏感强，所以采用了这个词。R&amp;B论资排辈的的话，应该比摇滚牛，因为它不仅出现地更早，而且在摇滚的盛世里，它都还在。不夸张的说，摇滚是一种合成出来的音乐，里面包含了三种元素，分别是R&amp;B, 福音音乐, 灵魂乐。</p>
+<p>在R&amp;B这个说法提出不久，内部也产生了分化，一派有点丧，另一派有点喜。喜派认为他们做的才是R&amp;B, 丧派只能叫&quot;跳跃蓝调&quot;(Jump Blues)，因为R&amp;B一定不能丧。这里面有一个跳跃蓝调的巨星——路易斯·乔丹(Louis Jordan)，因其有众多金曲，故号称&quot;点唱机之王&quot;(King of the Jukebox)，在1946年，连米高梅公司的明星卡通《猫和老鼠》都要在电影短片里放他的歌。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Louis%20Jordan%20-%20Is%20You%20Is%20Or%20Is%20You%20Ain't%20My%20Baby.mp3" controls="controls"></audio><br>
+Louis Jordan - Is You Is Or Is You Ain't My Baby</center>
+关于R&B形成的原因，其实还有一个历史原因，《了不起的盖茨比》原著中说的就是20世纪20年代的美国，这个年代被称为"爵士年代"，因为当时的爵士歌手在大城市特别容易找工作，但到了30年代，好多夜总会不太行了，所以爵士歌手也不太好找了，这时候就有那么一批歌手开始玩自己的音乐了，也就可以说是R&B诞生前夜。在这个时期，有一首歌必须提一下，来自哈莱特·哈姆菲斯(Harlem Hamfats)于1936年发行的《Oh Red!》。本人认为这类歌同《Singin' In the Rain》类似，但是话说回来，R&B的风格确实比较能get到共同点。
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Harlem%20Hamfats%20-%20Oh%20Red!.mp3" controls="controls"></audio><br>
+Harlem Hamfats - Oh Red!</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Gene%20Kelly%20-%20Singin'%20In%20the%20Rain.mp3" controls="controls"></audio><br>
+Gene Kelly - Singin' In the Rain</center>
+<p>(p.s. 不知道这样说对不对，Blues在国内算是相对比较小众的音乐类型，我第一次了解国内做Blues是在《中国好歌曲》, 张岭用一把贝斯带来的《<a href="https://v.youku.com/v_show/id_XNDMyNDEwNzAxNg==.html?spm=a2h0c.8166622.PhoneSokuUgc_3.dtitle" target="_blank" rel="noopener">喝酒Blues</a>》，这是一首我认为非常成熟的歌曲，尤其是唱法上，不像很多硬拉的高音，更多的像是一个长者的娓娓道来。)</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/%E5%96%9D%E9%85%92%20Blues%20%20-%20%E5%BC%A0%E5%B2%AD.mp3" controls="controls"></audio><br>
+张岭 - 喝酒Blues</center>
+<h4 id="4-灵魂乐-soul-music">4. 灵魂乐 (Soul music)</h4>
+<p>既然讲完了R&amp;B，这里插播一条把灵魂乐直接介绍完。因为灵魂乐本就是于1950年代发源自R&amp;B和福音音乐的结合这样一个音乐流派。紧扣节奏、拍掌、即兴形体动作，是其重要特征。此外，独唱与伴唱之间的交流对唱、特别紧绷的发声，也是其主要特色。早期灵魂乐的代表作有雷·查尔斯(Ray Charles)演唱的《I Got A Woman》，但是雷·查尔斯在R&amp;B也有很高的成就，叫他R&amp;B歌手也不为过。灵魂乐在整个1960年代后期都处于低迷期，1970年代开始才有点起势。2000年代，英国歌手艾米・怀恩豪斯(Amy Winehouse)以低沉的嗓音将灵魂乐融合爵士乐和雷鬼音乐等低混合的风格，获得了国际性成功。2010年代以后，阿黛尔(Adele)、萨姆·史密斯(Sam Smith)等著名影响力歌手，将灵魂乐加入更多流行音乐或另类摇滚等大众化商业元素，形成全球性认同。而国内的话是直到2017年，香港男歌手方大同及台湾女歌手艾怡良在第28届金曲奖分别获金曲歌王以及金曲歌后加冕，才标志着灵魂唱腔慢慢被华语乐坛接受。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Ray%20Charles%20-%20I%27ve%20Got%20A%20Woman.mp3" controls="controls"></audio><br>
+Ray Charles - I Got A Woman</center>
+<h4 id="5-乡村音乐-country-music">5. 乡村音乐 (Country Music)</h4>
+<p>前面述及这么多的Blues和R&amp;B，这些都属于黑人音乐，那同时期的白人在做什么？问题导向了本小节的乡村音乐。乡村音乐这个词完全是用于区别黑人音乐而出现的，那时候城里流行的都是爵士，日后成为流行音乐根基的乡村音乐还属于非主流，从它之前的名字&quot;乡巴佬音乐&quot;(hillbilly music)就可知道。</p>
+<p>乡村音乐的根源可追溯至1920年代，起源于美国南部与阿帕拉契山区，田纳西州下面的一个城市布里斯托尔（Bristol），美国政府后面在这里盖了一间博物馆，专门授予这个地方&quot;乡村音乐诞生地&quot;(The Birthday of Country Music Museum)。之所以这里能被授予这个称号，是因为1927年有一系列特别有影响力的录音在这里诞生，后人称这些音乐为“布里斯托尔现场”(Bristol sessions)。乡村音乐的第一代重要人物——卡特家族(The Carter Family)就是从这里出来的。没错，这个卡特家族就是美国前总统卡特的远房亲戚，组合里有3个人，阿尔文・普莱森特・卡特(Alvin Pleasant Carter)，梅比尔・卡特(Maybelle Carter)和萨拉・卡特(Sara Carter)(前两位是夫妻，后面是弟媳)。他们的歌多数描述当时身边的生活，有一首歌《Wabash Cannonball》就是描述19-20世纪一条贯穿美国中西部的铁路，歌曲里唱的正是呼啸的火车，从树林穿越到海岸的风景，以及人们的欢声笑语。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/The%20Carter%20Family%20-%20Wabash%20Cannonball.mp3" controls="controls"></audio><br>
+The Carter Family - Wabash Cannonball</center>
+第二代乡村音乐的代际划分是因为传播渠道的改变，从传统巡演的方式到20世纪30年代收音机的普及，让很多乡村音乐能通过电台的形式传播了，这里得提一下鲍勃·威尔斯(Bob Wills),他把乡村音乐和爵士乐做了结合，别有一番风味，他也是第一个用电吉他表演乡村音乐的人。
+<p>到了第三代，即二战后，乡村音乐就有很多变种了，蓝草(Bluegrass)就是其中一种，提一下，蓝草中标配的乐器是班卓琴(Benjo)。其实第三代的乡村音乐挺有意思，因为在20世纪50年代，乡村音乐的一个分支成就了摇滚乐，而再往后到了60年代，也就随之而然地出现了乡村摇滚。</p>
+<p>转之到了第四代乡村音乐, 可能提的最多的，家喻户晓的，就是约翰·丹佛(John Denver)的那首《Take Me Home, Country Roads》，我第一次听乡村音乐是在高中的时候，那时候身边的音乐软件还不成熟，酷狗是独霸一方的存在，随机到这首歌就按了红心，后面更深入地了解才知道，曾经在70年代许多脍炙人口的歌曲很多都出自他手，1977年，被称为&quot;科罗拉多的桂冠诗人&quot;，他绝对可以算的上是中国大陆观众最为熟悉的美国乡村歌手之一，邓小平当年访美的时候，他就有献唱这首歌。当然，乡村音乐还有几位十分知名的畅销歌手，一位是猫王埃尔维斯·普雷斯利(Elvis Aaron Presley)，尽管他也是新音乐类型“摇滚乐”的代表人物。另一位，当代音乐家葛司·布鲁克斯(Garth Brooks)，拥有一亿两千八百万专辑销售量，是美国史上最畅销的歌手。他个人就拥有六张钻石唱片，和披头士乐队(The Beatles)并列为拥有最多钻石唱片的艺人。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Take%20Me%20Home%2C%20Country%20Roads%20-%20John%20Denver.mp3" controls="controls"></audio><br>
+John Denver - Take Me Home, Country Roads</center>
+<p><strong>其实写完乡村音乐，本人存在更大的疑惑，你说美国的乡村音乐是这种形式，那么中国的乡村音乐是哪种？我觉得至少民歌(茉莉花、山路十八弯等)得算，尽管他们的音乐形式和风格相差很大。不过这个问题就留待以后遇到对的人探讨了。</strong></p>
+<h4 id="6-民谣音乐-folk-music">6. 民谣音乐 (Folk music)</h4>
+<p>我们今天所说的民谣, 其实在整个民谣音乐发展史只占了一半，因为Folk music这个词还有“民间音乐”这个意思，“民谣”和“民间音乐”只是中文译法不同，在老美那边看来，民谣叫“现代民歌”，而民间音乐叫“传统民歌”。所以接下来提到的就是“现代民歌”，也是我们常说的民谣。而传统民谣，要说起来的话，估计可以再开个新帖了。(或许以后感兴趣了，可以来补这个坑😛😎)</p>
+<p>现在所说的民谣，算时间应该是“二战”后兴起的，在这期间涌现出了一大批用老旋律新歌词的音乐人(这像不像90年代香港大量引进日本歌曲重新填词的操作？)，第一个要提的、也是最有名的必然属于伍迪·格思里(Woody Guthrie)。早期他唱过许多关于荒诞现实的歌，比如《Tom Joad》讲的就是一个被冤枉入狱的男子好不容易出狱，却发现家人已经搬到了西部。好不容易找到家人，又被冤枉。至于是否再次锒铛入狱，这首歌用了开放式的结尾，只是在歌词的最后一句喊了句口号，大概意思是每个人都要争取自己的利益。伍迪·格思里后面又因为一些政治原因辗转到了纽约，这时他唱了一首毕生最有影响力的一首歌《This Land is Your Land》，写这首歌的原因是因为被一首名叫《God Bless America》的歌恶心到了，觉得别人写的不够实际，当然，这首歌的旋律并非出自他本人，而是他借鉴卡特家族《When the World’s on Fire》旋律而来的。忘了提一点，这家伙儿的吉他上贴着一张便条，写着“这家伙能杀法西斯”(THIS MACHINE KILLS FASCISTS)，后代音乐人都觉得挺酷的，纷纷效仿把自己的态度写在乐器上。再后面，他在移民筹款的慈善演唱会“愤怒的葡萄”(Grapes of Wrath)结识了民谣界的另一位重量级人物——皮特·西格(Pete Seeger)，他可以说是民谣界最长寿的人之一(2014年去世，享年94岁)，有“美国现代民歌之父”之称，一直参与各种抗议活动，从民权运动、反越战，到现在的环保活动，他的歌声在被不同的人翻唱，他的身影也总是出现在这些抗议活动的舞台上。在西格引荐下，格思里进入了纽约的音乐圈且混得如鱼得水，在电台开设了自己的广播节目，有了一定影响力之后，立马举荐了黑人歌手“铅肚”(见Blues小节)。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Woody%20Guthrie%20-%20Tom%20Joad.mp3" controls="controls"></audio><br>
+Woody Guthrie - Tom Joad</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Woody%20Guthrie%20-%20This%20Land%20Is%20Your%20Land.mp3" controls="controls"></audio><br>
+Woody Guthrie - This Land Is Your Land</center>
+<p>既然说到民谣，那鲍勃·迪伦(Bob Dylan)也一定绕不开的。在格思里晚年，结识了一位忘年交小朋友，那便是19岁的鲍勃·迪伦，是的，就是前几年勇夺诺贝尔文学奖的那位。大概1960年左右，鲍勃会定期去格思里疗养的地方(Greystone Park Psychiatric Hospital, Morris County, New Jersey)和他聊天，鲍勃：我想跟你学民谣，格思里：我因伤无法弹吉他了，你去找我徒弟学去吧。好徒弟告诉鲍勃：民谣是学不来的，是“偷”来的，我师傅就是从“铅肚”那里“偷”来的。而年仅19岁的鲍勃根本不相信自己偶像格思里的歌是偷来的，返回去问格思里，他说：的确，我的歌是从师傅“铅肚”那里“偷”来的，因为民谣是用来传递精神的，重要的不是歌本身，而恰恰这种精神是学不来的。鲍勃铭记于心，第二年出的第一张专辑中有一首歌《Song to Woody》就有致敬格思里, “铅肚”, 还有格思里的那位好徒弟。后面鲍勃还整理了大量黑人歌曲(因为得知自己的偶像格思里受到黑人歌手“铅肚”的影响)，其中有一首脍炙人口的《Blowin’ in the Wind》就是从黑奴唱的歌中挖掘出来重新填的词。后面的故事大家也略知一二，关于鲍勃被授予诺贝尔文学奖，其实更广义的是民谣歌词中的文学意义。</p>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Bob%20Dylan%20-%20Song%20To%20Woody.mp3" controls="controls"></audio><br>
+Bob Dylan - Song To Woody</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Bob%20Dylan%20-%20Blowin'%20In%20the%20Wind.mp3" controls="controls"></audio><br>
+Bob Dylan - Blowin' In the Wind</center>
+<p>中国的民谣得从哪儿讲起呢？那得从90年代的校园民谣开始说说。台湾的民谣时代较早些，大概在上世纪70-80年代。1975年6月6日在台北中山堂的“现代民谣创作演唱会”上，台湾大学学生杨弦把台湾诗人余光中怀乡的诗谱成曲子演唱，深受青年欢迎。校园民谣不但反映青年生活，而且也是对西方音乐泛滥的一种抵制。当时一位名叫李双泽的歌手在演唱会上拍案而起，喊出了“唱我们自己的歌”的口号。从那以后，台湾校园歌手佳作不断，侯德健的《龙的传人》，叶佳修的《乡间小路》《外婆的澎湖湾》等，都是那一时期产生的。从1974年到1980年的顶峰期，台湾共产生了300多首校园民谣，其中最有名的莫过于罗大佑的《童年》。</p>
+<p>1979年我国著名歌唱家朱逢博率先在内地将台湾的校园歌曲《橄榄树》《踏浪》《我送你一首小诗》《我们情诗》等一大批歌曲介绍到内地听众，受到人们的欢迎。她深情委婉的低吟浅唱，成为一道亮丽的风景。1980年朱逢博还率先演唱内地作曲家谷建芬创作的《清晨，我们踏上小道》和《脚印》拉开了大陆校园歌曲的帷幕。1994年4月，一盒名叫《校园民谣Ⅰ》（1983－1993）的盒带由大地唱片公司发行，从此校园民谣有了自己的名字。不用我说，相信大家也能猜到，高晓松和老狼就在那时一夜成名，《同桌的你》、《睡在上铺的兄弟》不仅传唱校园，更成为了中国民谣史上不可抹去的一笔，而郁冬则尾随了一首响彻大江南北的《露天电影院》，只是多了些感伤。当然还有很多后继的优秀歌手，有和校园民谣一脉相承的歌手，如：“水木年华”《一生有你》《轻舞飞扬》，筠子，“夜班巴士”，曹卉娟《玻璃杯》，小果等，也出产了跟校园民谣貌合神离的物种，比如叶蓓《在路上》《青春无悔》《纯真年代》，王凡瑞，莫艳琳《爱一点》等。然而校园民谣是非常“短命”的，他们把童年、少年的记忆唱成挽歌，把校园生活唱成了集体的纪念。此外，大陆早在流行音乐刚起步时，就夹杂着“城市民谣”的歌声，李春波92年的《小芳》唱给了给予自己真诚抚慰的乡下姑娘，还用《一封家书》的形式优美地、动听地唱给了亲爱的爸爸妈妈。而他的东北老乡艾敬则用《我的1997》唱出了对于5年后香港回归的憧憬，艾敬是本人非常喜欢的一个歌手，当年实力不输那英的一位选手，由于歌词太政治化且个人性格刚毅遭到封杀，后面搞艺术去了。转眼到98年，一首《白桦林》突然风行，年长的人从它浓浓的俄罗斯韵味，猜测这是一首苏联老哥，万万没想到这竟然出自一个北京校园里长大的二十多岁的小伙子，一个沉默寡言，异常敏感，读童话故事《小王子》都会泪水泛滥的小伙子，朴树算是搭上了校园民谣的末班车。回想来看，其实我们现在所熟知的乐坛大佬(罗大佑、齐秦、黄品源、陈升等)都是隐形的民谣唱作人，代表着校园民歌向博大精深方向的演化，尽管他们已经不再具备纯正民谣的样式了。当然还有一些独树一帜的歌手，比如：老一辈的任贤齐《对面的女孩看过来》、熊天平《火柴天堂》《夜夜夜夜》，中青年选手钟立风《今天是你的生日，妈妈》、李志《你离开了南京，从此没有人和我说话》《梵高先生》,马頔《南山南》，赵雷《成都》《画》等等等等。</p>
+<p><strong>—以下内容尚未写完—</strong></p>
+<h4 id="7-摇滚音乐-rock-n-roll">7. 摇滚音乐 (Rock’n’Roll)</h4>
+<p>我们这里只谈论狭义的摇滚形式，摇滚作为一种音乐类型，起源于1940年代末期的美国，1950年代早期开始流行，迅速风靡全球。摇滚乐结合了当时流行的非裔美国人蓝调、乡村音乐、爵士乐以及福音音乐。虽然一些20年代的蓝调和30年代的爵士乐已经具有摇滚元素，但是摇滚乐是直到50年代才定型成一种独立音乐流派。<br>
+什么是摇滚乐呢？就其产生而言，它是黑人和白人节奏布鲁斯和乡村音乐相融合的一种音乐形式；就其使用的乐器而言，它是以吉它、贝司、鼓为主，加上大功效的音响和诸多效果器来表现音乐的形式；就其风格而言，它分为布鲁斯(Blues）、摇滚(Rock and Roll)、重金属(Heavy Metal)、朋克(Punk)、放克(Funk)、雷鬼(Reggae)、说唱乐(Rap)等等；除此以外，摇滚乐还有演唱、舞台设计，但是这些特点加起来，只是摇滚乐的形式而已。</p>
+<p>Jerry Lee Lewis</p>
+<p>那么在上个世纪40年代开始涌现出一大批摇滚音乐家和乐队以及优秀的作品，你像比如The Beatles(Yesterday, Let It Be, Hey Jude等)，David Bowie(Space Oddity等)，Steelheart(She’s Gone等)，Linkin Park(What I’ve Done, New Divide等)，Queen(Bohemian Rhapsody, We Will Rock You, We Are The Champions等)，Guns N’ Roses(Welcome To The Jungle等)，Bob Dylan(Knockin’ On Heaven’s Door等)等等，还有太多列举不完的优秀的音乐人和乐队。<br>
+在中国内地摇滚界中被公认为“摇滚之父”的是崔健，台湾地区的摇滚教父是罗大佑(他的折衷、混合风格让人无视了他是位杰出的摇滚天王)，香港地区摇滚天王是黄家驹，之后有一大批音乐人和乐队去玩摇滚，著名的摇滚音乐人还有有窦唯、张楚、何勇、黄家驹、左小祖咒、许巍、郑钧、汪峰、王勇、周晓鸥、谢天笑、苏见信等等。中国大陆地区著名的摇滚乐队有零点乐队、唐朝乐队、黑豹乐队、逃跑计划、超载乐队、花儿乐队（早期）、鲍家街43号、GALA乐队等等；香港地区著名摇滚乐队有Beyond、达明一派、太极乐队等等；台湾地区有信乐团、伍佰、五月天、狮子合唱团、草东没有派对等等。</p>
+<h4 id="8-流行音乐-popular-music">8. 流行音乐 (Popular music)</h4>
+<p>流行音乐是具有广泛吸引力的音乐，通常会通过音乐行业分发给广大受众。很少或没有音乐训练的人们可以享受和演奏这些形式和风格。它与艺术音乐和传统或“民间”音乐形成鲜明对比。艺术音乐过去是通过书面音乐的表演进行传播的，尽管自唱片业开始以来，它也通过唱片进行传播。早期的布鲁斯歌曲或赞美诗等传统音乐形式是通过口头或较小的本地听众传递的。流行音乐的种类很多，主要有以下分类：</p>
+<ul>
+<li><strong>流行乐 (Pop music)</strong><br>
+“Pop&quot;一开始就是&quot;流行音乐”(Popular Music)的缩写，也是其同义词，起源于美国的爵士音乐，大约在1954年左右才逐渐被用来指称狭义的特定音乐类型。Pop根植于大众生活的丰厚土壤之中，是最广泛的音乐类型，有&quot;大众音乐”之称。Pop在音乐中占了很大比例,因结构短小、内容(现代潮流为主，例如叙述爱情或生活等)通俗、形式活泼、情感真挚而被广大群众所喜爱、广泛传唱或欣赏。这些乐曲和歌曲中以现代流行的乐器为主，当然也有电子流行、合成器流行、流行舞曲等。流行乐方面的巨星可以说是数不胜数了，</li>
+</ul>
+<ul>
+<li><strong>放克音乐 (Funk)</strong><br>
+Funk起源于1960年代中期至晚期，非洲裔美国人音乐家将灵魂乐、灵魂爵士乐和节奏蓝调融合成一种有节奏的、适合跳舞的音乐新形式。第一次听到Funk这个词应该是我在大学里听到的火星哥Bruno Mars的歌曲《Uptown Funk》，23333，是很魔性的一首歌。火星哥融入Funk元素，充满“击勾”技巧的贝斯弹奏，以及丰富的合成器效果，与众多上世纪80年代早期的Funk/R&amp;B经典金曲遥相呼应，佳作一篇呐。</li>
+</ul>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Thank%20You%20%28Falettinme%20Be%20Mice%20Elf%20Agin%29%20-%20Sly%20%26%20the%20Family%20Stone.mp3
+" controls="controls"></audio><br>
+Sly & the Family Stone - Thank You (Falettinme Be Mice Elf Agin)</center>
+<center><audio src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9F%B3%E4%B9%90%E5%88%86%E7%B1%BB/Uptown%20Funk%20-%20Bruno%20Mars.mp3" controls="controls"></audio><br>
+Bruno Mars - Uptown Funk</center>
+<ul>
+<li>
+<p><strong>雷鬼乐 (Reggae)</strong><br>
+Reggae一词来自牙买加某个街道的名称，意思指日常生活中一些琐碎之事，早期的雷鬼乐是一些都市底层人士用来表达抗议的方式。广义上Reggae指牙买加境内流行音乐，但也包含斯卡曲风、慢拍摇滚或者dub。雷鬼乐采用的是一些节奏蓝调(R&amp;Bs)、爵士乐(Jazz)、门特音乐、卡里普索音乐、非洲音乐及拉美音乐中的一些元素。雷鬼乐的代表人物是巴布·马利(Bob Marley，也译作鲍勃·马莱，1945年-1981年)，他带动了雷鬼乐的流行。可惜英年早逝，年仅36岁就死于癌症。不过在上世纪70年代，他开办了一场名为“一份爱，一份和平”(One Love Peace Concert)的演唱会，使牙买加两大对立政党的领导人在舞台上握手，化解了一场政治风波，成为历史性一刻。来自牙买加的百米飞人——博尔特此前接受路透社采访时表示:“雷鬼音乐最能体现牙买加精神。”</p>
+</li>
+<li>
+<p><strong>巴萨诺瓦 (Bossa Nova)</strong><br>
+葡萄牙文，&quot;Bossa&quot;原意是演奏森巴时的自然风格与气质，&quot;Nova&quot;则是新的意思。结合起来，巴萨诺瓦就是一种融合了传统巴西桑巴(Samba)节奏与啼乐(Choro)的一种“新派音乐”。正统的巴萨诺瓦的起源是南美洲巴西土生土长的音乐，之后流传到北美洲之后广为爵士乐坛所喜爱，由美国爵士乐手大力推广。也因此有&quot;巴萨诺瓦是拉丁爵士的一种&quot;的说法。</p>
+</li>
+</ul>
+<ul>
+<li><strong>摇滚乐 (Rock Music)</strong></li>
+</ul>
+<ul>
+<li><strong>电子音乐 (Electronic music)</strong><br>
+电子音乐简称电音，是使用电子乐器以及电子音乐技术来制作的音乐；而创作或表演这类音乐的音乐家则称为电子音乐家。一般而言，使用电子机械技术与使用电子技术制作的声音是可以区别的。使用电子机械制造声音的设备有电传簧风琴、汉门式电风琴与电吉他；而纯粹的电子声音制造设备则有特雷门(也叫泰勒明，1919年俄国发明家莱昂·泰勒明(Lev Termin)发明的一种插电乐器，是世界最早的电子乐器之一)、声音合成器与电脑。1960年代晚期以后，因为摩尔定律造就了可负担的起的音乐科技，使电子方式制作音乐在各国不同区域流行的领域普及与发扬起来。今日的电子音乐包含各式各样从实验艺术音乐到流行形式。<br>
+本人对电音并不感冒，国内充斥着较多的电音综艺一个都没看过，在b站倒是听过电音大佬A神，佳作《Wake me up》确实不可多得。</li>
+<li><strong>流行舞曲 (Rock Music)</strong></li>
+<li><strong>嘻哈音乐/饶舌 (Hip hop music)</strong></li>
+<li><strong>爵士乐 (Jazz)</strong></li>
+<li><strong>拉丁音乐 (Latin Music)</strong></li>
+<li><strong>轻音乐 (Parlour music)</strong></li>
+<li><strong>中国风 (Chinoiserie)</strong></li>
+<li><strong>现代民俗音乐</strong></li>
+<li><strong>新世纪音乐 (New Age music)</strong></li>
+<li><strong>沙发音乐</strong></li>
+<li><strong>当代基督教音乐 (Contemporary Christian music)</strong></li>
+</ul>
+<ol start="3">
+<li>Religious music</li>
+<li>Traditional and folk music</li>
+</ol>
+<h4 id="1-古典音乐-艺术音乐-art-music">1. 古典音乐/艺术音乐 (Art music)</h4>
+<h3 id="ref">Ref:</h3>
+<ol>
+<li><a href="https://zh.wikipedia.org/zh-cn/%E9%9F%B3%E4%B9%90%E7%B1%BB%E5%9E%8B" target="_blank" rel="noopener">音乐类型</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Music_genre" target="_blank" rel="noopener">Music genre</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/56054163" target="_blank" rel="noopener">音乐分类</a></li>
+<li><a href="https://zh.wikipedia.org/zh-cn/%E6%B5%81%E8%A1%8C_%E9%9F%B3%E6%A8%82%E9%A1%9E%E5%9E%8B" target="_blank" rel="noopener">流行乐</a></li>
+<li><a href="https://www.bilibili.com/read/cv1870801/" target="_blank" rel="noopener">史上最全音乐类型总结（流行）是你爱的类型</a></li>
+<li><a href="https://baike.baidu.com/item/%E8%93%9D%E8%B0%83/109533?fr=aladdin" target="_blank" rel="noopener">蓝调</a></li>
+<li><a href="https://zh.wikipedia.org/wiki/%E6%94%BE%E5%85%8B" target="_blank" rel="noopener">Funk</a></li>
+<li><a href="https://zh.wikipedia.org/wiki/%E9%9B%B7%E9%AC%BC%E9%9F%B3%E6%A8%82" target="_blank" rel="noopener">雷鬼音乐</a></li>
+<li><a href="https://zh.wikipedia.org/wiki/%E5%B7%B4%E8%96%A9%E8%AB%BE%E7%93%A6" target="_blank" rel="noopener">巴萨诺瓦</a></li>
+<li><a href="https://zh.wikipedia.org/wiki/%E9%84%89%E6%9D%91%E9%9F%B3%E6%A8%82" target="_blank" rel="noopener">乡村音乐</a></li>
+<li><a href="https://zh.wikipedia.org/zh-cn/%E7%B4%84%E7%BF%B0%C2%B7%E4%B8%B9%E4%BD%9B" target="_blank" rel="noopener">John Denver</a></li>
+<li><a href="https://zh.wikipedia.org/wiki/%E7%84%A1%E4%BC%B4%E5%A5%8F%E5%90%88%E5%94%B1" target="_blank" rel="noopener">无伴奏合唱</a></li>
+</ol>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/宫商角徵羽/"># 宫商角徵羽</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2019/12/22/让我看看是哪位博士秃头了/20191222业内大牛或兴趣相关做的方向/">业内大牛或个人兴趣相关的方向</a>
+            
+            
+            <a class="next" rel="next" href="/2019/12/20/让我看看是哪位博士秃头了/20191219软物质概述/">软物质概述</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

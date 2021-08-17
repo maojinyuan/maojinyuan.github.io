@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>川普胜选演讲翻译（汉英对照版） | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">川普胜选演讲翻译（汉英对照版）</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/11/20&nbsp;&nbsp;0:30</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>作者：SS Wang<br>
+链接：<a href="http://zhuanlan.zhihu.com/p/23592369" target="_blank" rel="noopener">http://zhuanlan.zhihu.com/p/23592369</a><br>
+来源：知乎<br>
+著作权归作者所有，转载请联系作者获得授权。</p>
+<p>这篇写非常好，从美国人的角度说明为什么他们要选Trump。原文用词精辟，我翻译太渣，大家尽量看英文，翻译仅供对照。</p>
+<p>原文由Velostodon发在Reddit</p>
+<p><a href="https://www.reddit.com/r/The_Donald/comments/5c5ctg/they_just_dont_fucking_get_it/" target="_blank" rel="noopener">https://www.reddit.com/r/The_Donald/comments/5c5ctg/they_just_dont_fucking_get_it/</a></p>
+<p>========================</p>
+<p>“How did this happen?!” they cry.</p>
+<p>你哭着对我说，事情怎么会成这样？</p>
+<p>You want to know how this happened? You want to know how America resorted to bigotry and racism? You want to know how we let a TV star with no experience get to the White House? You want to know why we couldn’t stop being stupid enough to listen to what you had to say?</p>
+<p>I can explain.</p>
+<p>你想知道为什么这一切会发生？你想知道为什么美国人会转向偏执狂和种族主义？你想知道我们为什么会选一个没经验的脱口秀明星当总统？</p>
+<p>那我就大发慈悲地告诉你。</p>
+<p>Ten years ago I never had to tell somebody my wife was black and children were of mixed race to get them to stop assuming I was racist.</p>
+<p>Ten years ago I didn’t have to tell somebody I’m bisexual to get them to stop assuming I was being homophobic.</p>
+<p>Ten years ago I didn’t have to tell people I’ve read the Qu’ran to get them to stop assuming I was ignorant of Islam.</p>
+<p>Fifteen years ago I had pride in my nation.</p>
+<p>Twenty years ago I didn’t have to worry about the government spying on me because I sat next to someone suspicious on a plane.</p>
+<p>Twenty years ago I didn’t have to worry about getting kidnapped for being an American in most other countries.</p>
+<p>Twenty years ago 50 corporations made up 90% of the media market; today it’s 6.</p>
+<p>Thirty years ago people weren’t being attacked by animals in the streets over who they voted for.</p>
+<p>10年前，不会有人不停叫我“种族主义者”，逼我说出真相“我老婆就是黑人”。</p>
+<p>10年前，不会有人不停称为是“恐同症”，逼我说出真相“我自己就是个双性恋”。</p>
+<p>10年前，不会有人认为我“对YSL一无所知”，逼我说出“我读过古兰经”。</p>
+<p>15年前，我尚为自己祖国感到自豪。</p>
+<p>20年前，如果在飞机上，旁边做个可疑的人，我不会怀疑这是政府在跟踪我。</p>
+<p>20年前，在其他国家，我不担心由于是美国人所以会被绑架。</p>
+<p>20年前，50个公司控制90%的媒体市场；如今只剩下6个。</p>
+<p>30年前，人们不会因为自己的投票而遭到当街殴打。</p>
+<p>This is the country that brought the world electricity, the light bulb, that tamed the last frontiers in the world, that carved the faces of great men into mountains, that brought us powered flight, that broke the sound barrier, brought Europe peace after the most destructive war ever seen, tried to play nice but brought forth a fury never fucking seen before when we were attacked, sent men to the fucking Moon. But something happened.</p>
+<p>这个国家带给世界电力、照明，征服了世界未知的角落，将4个伟人的脸刻在山上，让人类像鸟一样飞翔，让飞机突破音速，被攻击后再沉默中爆发出惊世骇俗的力量，把欧洲从历史上最残酷的战争中救出，把人送上月球。但是好景不长。</p>
+<p>We began intervening in other nations’ conflicts. We started trying to develop this network of power across the world. We started fighting wars formoney. And when we were attacked harder than ever before, we pulled our punches and used it as an excuse to fight somebody that wasn’t even responsible.</p>
+<p>我们开始干涉其他国家。我们的手开始伸向全球各地。我们开始为金钱发动战争。当我们被更猛烈地攻击的时候（是不是指911？），我们却收回拳头，然后出拳猛击另一个无辜的国家（是不是伊拉克？）。</p>
+<p>We voted for change and change never came. We voted for the young charismatic man, and he sold us a bridge. He was given near complete power to bring change and what he brought us was a ham-fisted attempt at health care reform that he didn’t understand and we didn’t want. He promised change from the needless wars and brought us anonymous murder from above on an unprecedented scale. And because he happened to be President when gays got the right to marry, we’re supposed to think of him positively?</p>
+<p>我们为变革投票，然而变革根本没来。（注：奥巴马的竞选口号就是“变革”）。</p>
+<p>我们选出了一个有魅力的年轻人，全力支持他去变革。然而，他给了我们一个愚蠢的连他自己也不懂的医保变革；我们根本不需要这样的变革。他承诺带我们走出战争，他却带给我们&quot;无人机杀人&quot;。碰巧在他任期内同性结婚合法，我们就必须给他正面评价？</p>
+<p>Let me ask you, when was the last time you heard a song written with this much national pride?</p>
+<p>我就问一句，你上次 听到充满对国家自豪的歌曲 是什么时候？</p>
+<p>We are tired of being led down the path of shame. We are tired of fighting other people’s wars. We are tired of the globalist network of power. We are tired of the oligarchy. We are tired of being indisputably the single most powerful nation to ever exist on this Earth and yet not being able to win the wars that corporations, industries, and oligarchs get us into because our leaders want to pretend war is an opportunity to be culturally sensitive and play nice.</p>
+<p>我们厌倦了被领向耻辱的道路。我们厌倦了为别人打仗。我们厌倦了全球化的权钱网络。我们厌倦了寡头统治。我们领导人骗我们说战争是一次机遇；大公司、政治寡头将我们领入战争；我们是世界第一强国，却总也赢不了战争。</p>
+<p>But when we try to voice these concerns and desires we are called racist because the person we disagree with is black. We are called sexist because the person we disagree with is a woman. We are called homophobic for saying there are bigger priorities for the President than deciding who uses what bathroom. We are called Islamophobic for expecting our ultra-powerful military and police might to be able to provide us security. We are called rednecks, and fools, and morons, all because we disagree.</p>
+<p>我们大声表达出自己的忧心，我们被扣上种族主义的帽子，因为我们在反对那位黑人的意见。</p>
+<p>我们反对那个人，我们被扣上歧视女性的帽子，因为那个人是女的。</p>
+<p>我们说比起（变性人）厕所法案，总统有更重要的事该做，我们被扣上恐同症的帽子。</p>
+<p>我们期待我们超级强大的军警能给我们带来安全感的时候，我们被扣上了“恐伊斯兰症”的帽子。</p>
+<p>我们被人称作“红脖子”，“愚蠢”，“无知”，仅仅因为我们有不同的想法。</p>
+<p>And we are told we should not disagree, because the “experts” say so? Like Nate Silver, who has been wrong about everything since 2012? Who was wrong about the results of the 2014 midterms, the Brexit vote, the primaries, the World Series, and the general election? I’m only an amateur analyst and I outperformed him.</p>
+<p>We should just believe CNN who has been proven to feed information to political parties? Who orders their focus groups on how to respond? Who cuts the audio from anyone that strays from the narrative they sell?</p>
+<p>The pollsters, who were so incredibly wrong about 2012, Brexit, and 2016?</p>
+<p>Why should we believe the “experts” who get paid more and more for being right when they can’t get anything right?</p>
+<p>我们被告知不能反对，因为“砖家”是如是说的。这些砖家包括Nate Silver，从2012年到现在什么都没说对过，预测错了2014中期选举，英国脱欧，党内初选，世界棒球锦标赛，以及大选。（卧槽，Nate Silver这货是不是美版张召忠？？？）我作为业余的，已经比这个砖家好了。（于是干嘛要相信砖家？）</p>
+<p>我们是不是该相信CNN呢？CNN一直是政客的信息来源。CNN教唆他们的阅读群体如何去应对现实，而与他们意见相左的声音就直接屏蔽掉。</p>
+<p>那些做民调的，对中期选举、脱欧、大选的预测都错的离谱。</p>
+<p>那些砖家想要做对却什么都做不对，我们还要相信砖家？</p>
+<p>Then a man we’ve known for decades shows up and decides to speak up for us - and you call him racist, sexist, homophobic, Islamaphobic, arachnephobic and whatever else. But he speaks to us and for us. And you try to shut him up. You cast him as a reality TV star with no knowledge, while peddling Hollywood stars with no knowledge, as if Donald Trump has not been a household name for four fucking decades?</p>
+<p>这时候一个我们都非常熟悉的人挺身而出，这个人决定替我们说话。你们给他扣上了种族主义、性别歧视、恐同、恐伊斯兰、等等你们所能想到的一切头衔。他与我们对话并替我们说话。你们站出来堵住他的嘴。你们把川普描绘成一个无知的电视明星，却听信同样没有政治知识的好莱坞明星（好莱坞明星大多数都在youtube上做视频支持希拉里，超多的，但是评论里面多是批评，真是讽刺）。如果比的是名声，那川普可是四十年家喻户晓的啊，那帮好莱坞戏子又有什么可信的？（讽刺希拉里支持者为了自己的立场，甚至宁愿听信娱乐明星都不去理智的去看待川普）。</p>
+<p>Then all the people we’ve been sick of, the Bush family, the Clinton family, the Obama administration, the elite of the world and the market and media,all of these people we have been trying to get to change, team up against this man. And you think we can’t see through that?</p>
+<p>接下来，我们厌恶的人都粉墨登场：布什家族、克林顿家族、奥黑的政府、以及全世界的精英、市场、传媒。这些货沆瀣一气来反对Trump。你们觉得我们都是傻子，看不透背后的一切？</p>
+<p>You lied about polls and when we saw through it you called us paranoid. You lied about crime committed and called us paranoid. You lied about the medical status of a public figure, for fuck’s sake, and called us paranoid.Yet time after time when we were right, you just said, “A broken clock is right twice a day!”</p>
+<p>你们编造民调的谎言；我们看穿了谎言，你们说我们多疑。我们知道了她的罪行，你们说我们是迫害妄想症。我们知道了她真实身体状况，你们继续撒谎，还说我们偏执狂。我们一次又一次对了，你们会说“坏了的钟表每天也有2次是对的”。</p>
+<p>No.</p>
+<p>Fuck you. This happened because we are so goddamn sick of you. We are so goddamn sick of not being heard. We are tired of being brushed off when we speak, so we don’t speak often. The Silent Majority.</p>
+<p>去你妈的。这次的事是因为我们已经对你们恶心到极点。你们根本不听我们的声音！我们想说话的时候你们把我们赶走，所以我们就没有声音了对吧？</p>
+<p>沉默的大多数！</p>
+<p>Michael Moore, of all fucking people, was the only one of you globalist shits to ever actually GET IT. You don’t fucking get it. Michael Moore, of aaaaaall people said words that brought me to tears because of how accurate he was.</p>
+<p>The media didn’t want him.<br>
+The GOP establishment didn’t want him.<br>
+The pollsters didn’t want him.<br>
+The globalists didn’t want him.<br>
+The NeoCons didn’t want him.<br>
+The Socialists didn’t want him.<br>
+The global power brokers didn’t want him.</p>
+<p>所有人中，只有Michael Moore（一个左派的电影人，拍过很多深刻的纪录片）了解我们。你们TMD怎么也不懂。所有人中，只有Michael Moore说出让我们泪奔的真相：</p>
+<p>“媒体不想让他当选。<br>
+共和党建制派不想让他当选。<br>
+民意调查的人不想让他当选。<br>
+全球化主义者不想让他当选。<br>
+新保守主义者不想让他当选。<br>
+社会主义者不想让他当选。<br>
+世界权钱的代理们不想让他当选。”</p>
+<p>But the people who are tired of fighting these wars our military isn’t allowed to win, tired of being robbed, tired of being taxed to poverty, tired of being insulted, tired of being slandered, tired of being lied to, tired of our livelihoods being given away, tired of being brushed off - yeah, US, we wanted him.</p>
+<p>但是，人们厌倦了总打败仗因为有人不想打赢，人们厌倦了被抢劫，人们厌倦了被重税打劫到一贫如洗，人们厌倦了被侮辱和诋毁，人们厌倦了谎言，人们厌倦了工作被拿走，厌倦了被赶走。没错，我们就是想选他。</p>
+<p>He isn’t any of the things you try to tell us he is. We saw through it and you still lie even in defeat.</p>
+<p>At the worst, he will be a message, louder and stronger than we have ever had.</p>
+<p>And, at best, he will take us back to the moon, up to the stars, build unrivaled monuments that will last centuries, bring back our jobs and our pride.</p>
+<p>This man literally took on the world for us.</p>
+<p>And I bet even if you read this, you still don’t get it.</p>
+<p>他根本不是你们所描述的那种怪物。我们早已看穿真相，你们却依然在骗，输了还在骗。</p>
+<p>最糟糕的情况，他至少也是一个信使，发出我们从没听见的声音。</p>
+<p>最好的情况，他会带我们登月，带我们去其他星球，树立起不朽的丰碑，带回我们的工作和骄傲。</p>
+<p>这个人简直就是我们的一切。</p>
+<p>我打赌，你们读完，你们依然不懂我们。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/11/21/知识搬运工/20161121有哪些听起来或温暖或心酸的情话？/">有哪些听起来或温暖或心酸的情话？</a>
+            
+            
+            <a class="next" rel="next" href="/2016/11/19/知识搬运工/20161119为什么选Trump：美国白人的心声/">为什么选Trump：美国白人的心声</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

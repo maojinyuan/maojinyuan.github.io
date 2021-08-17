@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>为什么还有那么多病无药可医 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">为什么还有那么多病无药可医</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2021/03/17&nbsp;&nbsp;22:17</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/让我看看是哪位博士头秃了/">让我看看是哪位博士头秃了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>对于新药研发，很多人都不理解，为什么世界上有那么多病无药可医？药企为什么不去做有针对性的研发？</p>
+<p>首先，最根本的原因在于，新药研发不是在做产品，而是在做科研。</p>
+<p>做产品，是在满足需求，比如发烧了需要降温，一条凉毛巾就能满足你的需求。但是做科研，只有找到了细胞或分子水平上的病变，搞清楚致病原因，现代制药工业才可能有针对性地介入，研发出安全有效的新药。所以新药研发的起点，一定是确认导致疾病的原因，或是确定对疾病状态有调节作用的因素。</p>
+<p>举一个例子，“二战”之后，制药业发展非常活跃，一个科研小组就能研发出几十种抗生素。这是因为抗生素是抑制细菌生长的药物，被用来治疗细菌感染性疾病。细菌感染性疾病是病理学上最直观、最容易理解的，致病源很明确，所以药物研发的目标也很明确，就是抑制或清除这些致病源。</p>
+<p>而困扰现代人的，大部分是退行性疾病，也就是所谓的慢性病，比如高血压、糖尿病。退行性疾病的种类很多，病变各不相同，非常复杂，最重要的是，我们目前对这些疾病在细胞或分子水平上致病原因的了解还很少。</p>
+<p>还有一类更特殊的疾病，就是遗传病。过去我们对它的发病原因一无所知，走过很多弯路，但今天我们对它的发病原因已经很了解了，知道其是由患者父母所携带的致病基因传给子女而引起的。遗传疾病用药的研发过程，特别能体现新药研发不是做产品，而是做科研。所以我们就从一个遗传病药物研发的例子讲起。</p>
+<p>1882年，法国一位名叫菲利普·戈谢的医学生在实习期间遇到了一个古怪的病例。患者的内脏器官出现了多种非常特殊的病变，比如脾脏和肝脏肿大。刚开始，患者被怀疑得了癌症，但患者直接的死亡原因却是败血症。</p>
+<p>有了这第一例之后，医学界就开始注意相关疾病。20年后的1902年，美国一个叫布里尔的病理学家在仔细研究了这些记录和报道后提出：这是一种遗传病。布里尔首次把这种相当罕见的遗传病称为“戈谢病”。</p>
+<p>脾脏和肝脏肿大是戈谢病最常见的症状，有关戈谢病的研究和治疗也就从这里开始。</p>
+<p>因为当时没有其他的信息，戈谢病的治疗主要以直接消除或缓解症状为目的。比如患者的肝脏、脾脏肿大，医生就会建议做切除或者移植;再比如骨骼和关节出了问题，就做骨科的修复手术，等等。这是很典型的头疼医头、脚疼医脚。这就是一种典型的“做产品”的思路。</p>
+<p>在这种情况下，我们能开始做药吗？答案是不能。</p>
+<p>尽管戈谢病药物的市场需求是明摆着的，但是我们对能满足这种需求的“产品”仍一无所知，根本无从下手。我们必须做进一步的科学研究，才能找到切入点。</p>
+<p>其次，找出致病原因真的是一项长期而又艰苦的基础科研工作。</p>
+<p>药物研发毕竟是科学研究，不是产品设计。我们真正找到“做科研”的方向，就足足用了32年。1934年，戈谢病的研究终于取得了突破性的进展，深入到分子水平。</p>
+<p>有一位法国化学家在研究了戈谢病患者的脾脏和肝脏样本之后，发现导致这两个脏器肿大的原因，是一种叫作“葡萄糖脑苷脂”的脂肪类物质的积聚。这说明患戈谢病很有可能是因为葡萄糖脑苷脂的合成或者代谢出现了问题，不是合成的量太多来不及清除，就是降解受到阻碍，造成滞留。</p>
+<p>研究到这一步，我们能开始做药了吗？答案还是不能。在彻底搞清楚致病原因是“合成太多”还是“没及时降解”之前，我们还要等一等。</p>
+<p>1965年，美国生化学家布雷迪的研究团队终于确定，戈谢病患者体内葡萄糖脑苷脂的累积，不是因为生物合成过量，而是因为它的降解出现了问题。</p>
+<p>这个研究团队在葡萄糖脑苷脂的代谢途径中发现了一个新的蛋白质，它对葡萄糖脑苷脂的降解起着非常关键的作用。研究团队把它称作“葡萄糖脑苷脂酶”。在戈谢病患者体内，这种酶对葡萄糖脑苷脂的降解能力只有正常人的10%到20%。</p>
+<p>到這里，我们对戈谢病的认识又进了一大步，治疗戈谢病的问题也变成了：有什么办法能提高这种酶的活性？</p>
+<p>这个时候，距离第一例戈谢病患者被记录，已经过去了整整83年。也就是说，经过83年的长期研究，我们才终于从早期的对“症”治疗发展到了对“因”下药。</p>
+<p>最后，只有找到细胞或分子水平上的病变，现代制药工业才可能有针对性地介入，研发出安全有效的新药。</p>
+<p>找到了病因，就皆大欢喜了吗？不是。从确定科研的方向，到具体实施，又经过了一段漫长的时间。</p>
+<p>分子遗传学研究显示，在戈谢病患者体内，编码葡萄糖脑苷脂酶的基因发生了功能缺失性的变异，导致酶活性的下降。换句话说，戈谢病患者自身的葡萄糖脑苷脂酶是活性低下的“次品”。</p>
+<p>到这里，戈谢病的发病原因算是基本搞清楚了：位于1号染色体上的葡萄糖脑苷脂酶的基因发生了功能缺失性变异，根据具体变异的不同，戈谢病又被细分为Ⅰ型、Ⅱ型和Ⅲ型。</p>
+<p>在戈谢病被发现整整一个世纪之后的1981年，美国几位名牌大学的教授强强联手，成立了健赞公司，主攻戈谢病药物。</p>
+<p>新的研究结果显示，早期葡萄糖脑苷脂酶的临床试验失败，很可能是因为血液里的天然葡萄糖脑苷脂酶不能进入体内的特定部位，所以无法正常工作，而解决这个问题，需要用化学方法对葡萄糖脑苷脂酶进行结构上的微调。</p>
+<p>这又是一件说起来容易做起来难的事，其中有不少科学和技术上的难点。</p>
+<p>单从时间上看，第一代葡萄糖脑苷脂酶替代药物的研发花了整整10年，于1991年在美国上市。</p>
+<p>这款药的有效成分，是从婴儿出生后的胎衣中提取，然后进行化学修饰才得到的。由于其含量极低，治疗一个成年戈谢病患者所需的药物，必须从几百吨的胎衣中提取，工序极其复杂，成本非常高。</p>
+<p>第二代戈谢病特效药伊米苷酶是1995年上市的，这是一款升级换代产品，它采用生物工程技术工业化生产，极大地降低了成本，根本性地改变了戈谢病的治疗。它也是大众视野里，第一款治疗戈谢病的特效药。</p>
+<p>值得庆幸的是，在过去的100年中，基础生命科学取得了极大的发展。从1981年美国发现第一例艾滋病，到1995年年底首个抗艾滋病病毒药物上市，只用了14年。</p>
+<p>但是还有很多疾病，比如阿尔茨海默病，我们对其仍然所知甚少，不知何时才能真正开始研发有效药物。</p>
+<p>作者——梁贵柏（刘 振摘自微信公众号“罗辑思维”）</p>
+<p><strong>摘录这篇文章的原因是：这篇文章对于“戈谢病”药物的开发历程及背景的阐述条理思路非常清晰，值得学习。20210317记</strong></p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/Ph-D/"># Ph.D.</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2021/03/20/觉得好就收录了/20210302《给我妈尝尝》/">《给我妈尝尝》</a>
+            
+            
+            <a class="next" rel="next" href="/2021/02/28/随笔/20210228重看《正阳门下》有感/">重看《正阳门下》有感</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

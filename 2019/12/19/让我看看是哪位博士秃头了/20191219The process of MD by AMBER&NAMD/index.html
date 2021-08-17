@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>The process of MD by AMBER&amp;NAMD | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">The process of MD by AMBER&amp;NAMD</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2019/12/19&nbsp;&nbsp;11:08</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/让我看看是哪位博士头秃了/">让我看看是哪位博士头秃了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h3 id="font-color-red-creating-topology-and-coordinate-files-for-ligand-font"><font color="red"> Creating topology and coordinate files for ligand </font></h3>
+<ul>
+<li>
+<p><strong>reduce Ligand.pdb &gt; SUB.pdb</strong><br>
+加氢处理</p>
+</li>
+<li>
+<p><strong>antechamber -i SUB.pdb -fi pdb -o SUB.mol2 -fo mol2 -c bcc -pf y</strong><br>
+输出.mol2文件<br>
+-c bcc: use the AM1-BCC charge model in order to calculate the atomic point charges.<br>
+<img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/Amber%20charge%20methods.png" alt></p>
+</li>
+<li>
+<p><strong>parmchk -i SUB.mol2 -f mol2 -o SUB.frcmod</strong><br>
+输出成.frcmod<br>
+.frcmod: a parameter file that can be loaded into LEaP in order to add missing parameters.<br>
+you may see any parameters listed with the comment “ATTN: NEEDS REVISION” then it means that Antechamber could not determine suitable parameters and so you must manually provide these before you can proceed with the simulation.</p>
+</li>
+<li>
+<p><strong>$tleap -f leaprc.ff99SB</strong><br>
+tleap -f leaprc.ff99SB<br>
+加载tleap和AMBER力场ff99SB(p.s.复制的时候去掉$)</p>
+</li>
+<li>
+<p><strong>source leaprc.gaff</strong><br>
+加载小分子力场gaff<br>
+ensure the GAFF force field is available</p>
+</li>
+<li>
+<p><strong>SUB = loadmol2 SUB.mol2</strong><br>
+加载SUB</p>
+</li>
+<li>
+<p><strong>list</strong><br>
+查看（该步可省略）</p>
+</li>
+<li>
+<p><strong>check SUB</strong><br>
+查看SUB缺失信息（该步可省略）</p>
+</li>
+<li>
+<p><strong>loadamberparams SUB.frcmod</strong><br>
+加载.frcmod</p>
+</li>
+<li>
+<p><strong>check SUB</strong><br>
+确认SUB缺失信息是否补齐</p>
+</li>
+<li>
+<p><strong>saveoff SUB SUB.lib</strong><br>
+创建SUB库，供后面使用</p>
+</li>
+<li>
+<p><strong>saveamberparm SUB SUB.prmtop SUB.inpcrd</strong><br>
+创建 .prmtop, .inpcrd文件</p>
+</li>
+<li>
+<p><strong>quit</strong></p>
+</li>
+<li>
+<p>以上antechamber的tleap内容可以通过建立一个tleap1.in文件, 内容如下，命令行运行tleap -f <a href="http://tleap1.in" target="_blank" rel="noopener">tleap1.in</a>:</p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">source leaprc.ff99SB</span><br><span class="line">source leaprc.gaff</span><br><span class="line">SUB = loadmol2 SUB.mol2</span><br><span class="line">check SUB</span><br><span class="line">loadamberparams SUB.frcmod</span><br><span class="line">saveoff SUB SUB.lib</span><br><span class="line">saveamberparm SUB SUB.prmtop SUB.inpcrd</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+<h3 id="font-color-red-creating-topology-and-coordinate-files-for-enzyme-substrate-complex-font"><font color="red"> Creating topology and coordinate files for enzyme_substrate complex </font></h3>
+<ul>
+<li>
+<p><strong>加载对接好的(一般对接都去除了H)enzyme_substrate.pdb, 确保该pdb文件里的底物名称和第1步是一样的(SUB)。<br>
+加H，并对HIS, ASP, GLU和二硫键SSBOND进行判断和修改。</strong><br>
+如果分子量大，就截断保存成4tgl_12dicaprin.pdb</p>
+</li>
+<li>
+<p><strong>加H，并对HIS, ASP, GLU和二硫键SSBOND进行判断和修改</strong><br>
+a. 加氢的软件有很多，antchamber里面的加氢程序一般，而且产生的输出文件有很多需要手动调整的地方。可以选用其他软件如：薛定谔，PDB2PQR Server等。此处我用的是后者PDB2PQR Server (<a href="https://nbcr-222.ucsd.edu/pdb2pqr_2.0.0/" target="_blank" rel="noopener">https://nbcr-222.ucsd.edu/pdb2pqr_2.0.0/</a>).<br>
+b. HIS有3种质子化状态(HID,HIE,HIP), ASP质子化为ASH, GLU质子化为GLH.(详见word文档 “Amber蛋白质力场中组氨酸相关参数的识别与选择”).<br>
+c. 有的时候后面进行的程序会报错还需要注意修改末端氨基酸报错原子的命名方式,必要时在ATOM和HETATM之间空一行添加词&quot;TER&quot;.<br>
+d. SSBOND一定要在开头和结尾加上SSBOND连接的原子标号和CONNECT连接关系：</p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SSBOND   1 CYX A   25    CYX A  264</span><br><span class="line">SSBOND   2 CYX A   36    CYX A   39</span><br><span class="line">SSBOND   3 CYX A  231    CYX A  240</span><br><span class="line">…</span><br><span class="line">TER</span><br><span class="line">END</span><br><span class="line">CONECT 538 584</span><br><span class="line">CONECT 374 4018</span><br><span class="line">CONECT 3545 3663</span><br></pre></td></tr></table></figure>
+<ul>
+<li>
+<p><strong>$tleap -f leaprc.ff99SB</strong><br>
+加载tleap (不需要复制$)</p>
+</li>
+<li>
+<p><strong>source leaprc.gaff</strong><br>
+加载小分子力场gaff<br>
+ensure the GAFF force field is available</p>
+</li>
+<li>
+<p><strong>loadoff SUB.lib</strong><br>
+加载第1步&quot;Creating topology and coordinate files for ligand&quot;里建立的小分子SUB库</p>
+</li>
+<li>
+<p><strong>complex = loadpdb  enzyme_substrate.pdb</strong><br>
+加载上面处理好的enzyme_substrate，赋值给complex</p>
+</li>
+<li>
+<p><strong>saveamberparm complex enzyme_substrate.prmtop enzyme_substrate.inpcrd</strong><br>
+得到拓扑文件.prmtop和.inpcrd<br>
+该步可不进行，因为后面还要加水盒子，会产生这个两个文件</p>
+</li>
+<li>
+<p><strong>savepdb complex enzyme_substrate.pdb</strong><br>
+保存酶和底物的pdb文件</p>
+</li>
+<li>
+<p><strong>quit</strong><br>
+#里的内容可以通过建立一个tleap2.in文件, 内容如下，命令行运行tleap -f <a href="http://tleap2.in" target="_blank" rel="noopener">tleap2.in</a>：</p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">source leaprc.ff99SB</span><br><span class="line">source leaprc.gaff</span><br><span class="line">loadamberparams SUB.frcmod</span><br><span class="line">loadoff SUB.lib</span><br><span class="line">complex = loadpdb enzyme_substrate.pdb</span><br><span class="line">saveamberparm complex enzyme_substrate.prmtop enzyme_substrate.inpcrd</span><br><span class="line">savepdb complex enzyme_substrate.pdb </span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+<h3 id="font-color-red-creating-waterbox-for-enzyme-substrate-complex-font"><font color="red"> Creating waterbox for enzyme_substrate complex</font></h3>
+<ul>
+<li>
+<p><strong>$tleap -f leaprc.ff99SB</strong><br>
+加载tleap</p>
+</li>
+<li>
+<p><strong>source leaprc.gaff</strong><br>
+ensure the GAFF force field is available</p>
+</li>
+<li>
+<p><strong>loadoff SUB.lib</strong><br>
+加载SUB库</p>
+</li>
+<li>
+<p><strong>complex = loadpdb enzyme_substrate.pdb</strong><br>
+加载上面处理好的pdb文件，赋值给complex</p>
+</li>
+<li>
+<p><strong>solvatebox complex TIP3PBOX 12</strong><br>
+solvatebox solute solvent buffer [ “iso” ] [ closeness ]<br>
+In this case our solute is the NMA unit we created. For the solvent we will use TIP3PBOX. This is a pre-equilibrated box of TIP3P water. Type “edit TIP3PBOX” if you want to take a look at it.<br>
+For buffer we will specify 15 which means we want a solvent box of 15 angstroms between any atom in our NMA and the edge of the box.</p>
+</li>
+<li>
+<p><strong>addions complex Na+ 0</strong><br>
+使整个体系电荷为0, 有时也用：addions complex Cl- 0</p>
+</li>
+<li>
+<p><strong>savepdb complex AMBER.pdb</strong><br>
+保存做好的含有水的enzyme_substrate盒子，命名为AMBER</p>
+</li>
+<li>
+<p><strong>saveamberparm complex AMBER.prmtop AMBER.inpcrd</strong><br>
+保存带有水盒子的拓扑参数</p>
+</li>
+</ul>
+<h3 id="font-color-red-calculating-the-parameter-of-waterbox-font"><font color="red"> Calculating the parameter of waterbox </font></h3>
+<p>跑MD之前，我们需要对conf文件按需修改一下，其中有两部分参数（#periodic boundry conditions#和#Fix residues and sub in the QM region#）的修改需要计算一下。</p>
+<ul>
+<li><strong>periodic boundry conditions中x(cellbasisvector1), y(cellbasisvector2), z(cellbasisvector3)以及cellorigin的计算方法</strong><br>
+VMD加载第3步&quot;Creating waterbox for enzyme_substrate complex&quot;做好水盒子的AMBER.pdb后，在TKconsole依次输入下面每一行代码：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">set boxsize [open boxsize.dat w]</span><br><span class="line">set everyone [atomselect top all]</span><br><span class="line">puts $boxsize &quot;[measure minmax $everyone]&quot;</span><br><span class="line">puts $boxsize &quot;[measure center $everyone]&quot;</span><br><span class="line">close $boxsize</span><br></pre></td></tr></table></figure>
+<p>结束后会得到一个boxsize.dat文件，里面有两行数字：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;-37.61600112915039 -37.027000427246094 -38.91999816894531&#125; &#123;37.56800079345703 36.770999908447266 38.637001037597656&#125;</span><br><span class="line">-0.06635649502277374 0.046685513108968735 -0.14716365933418274</span><br></pre></td></tr></table></figure>
+<p>从第一行可以得到：x=37.568-(-37.616)，y=36.771-(-37.027)，z=38.637-(-38.920)<br>
+从第二行可以得到cellorigin的三个值</p>
+<ul>
+<li><strong>Fix residues and sub in the QM region</strong><br>
+上一步做完后，接着输入一下代码($不能省略):</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">set everyone [atomselect top all]</span><br><span class="line">$everyone set beta 0</span><br><span class="line">set prolig [atomselect top &quot;resid 78 140 141 199 253 266&quot;] </span><br><span class="line">$prolig set beta 1</span><br><span class="line">$everyone writepdb prolig-fix.pdb</span><br></pre></td></tr></table></figure>
+<p>该步的意思就是将AMBER.pdb中78, 140, 141, 199, 253氨基酸和266底物的最后一列的值由0变为1供namd识别为fix residues and sub in the QM region，并保存为prolig-fix.pdb.</p>
+<p>(p.s. &quot;Calculating the parameter of waterbox&quot;中两步操作的代码可以通过合并建立一个namd-prep.tcl脚本在TKconsole里面执行vmd -dispdev text -e namd-prep.tcl，但是我个人的电脑或者在超算上这么执行就会卡住，所以一般我都是手动输入代码执行。)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">##measuere the size of system##</span><br><span class="line">set boxsize [open boxsize.dat w]</span><br><span class="line">set everyone [atomselect top all]</span><br><span class="line">puts $boxsize &quot;[measure minmax $everyone]&quot;</span><br><span class="line">puts $boxsize &quot;[measure center $everyone]&quot;</span><br><span class="line">close $boxsize</span><br><span class="line"></span><br><span class="line">##fix protein, ion (PDB) and  ligand##</span><br><span class="line">set everyone [atomselect top all]</span><br><span class="line">$everyone set beta 0</span><br><span class="line">set prolig [atomselect top &quot;resid 78 140 141 199 253 266&quot;] </span><br><span class="line">$prolig set beta 1</span><br><span class="line">$everyone writepdb prolig-fix.pdb</span><br></pre></td></tr></table></figure>
+<h3 id="font-color-red-going-to-md-font"><font color="red"> Going to MD </font></h3>
+<p>现在，我们得到了有水盒子并处理好蛋白底物的AMBER.pdb, AMBER.inpcrd, AMBER.prmtop,还有一个标记了fix atom的prolig-fix.pdb</p>
+<ul>
+<li><strong>修改AMBER.conf</strong><br>
+将&quot;Calculating the parameter of waterbox&quot;步骤中得到的xyz以及cellorigin值填入#periodic boundry conditions (section 6.4.3)。</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line">#############################################################</span><br><span class="line">##Job description                                          ##</span><br><span class="line">#############################################################</span><br><span class="line"></span><br><span class="line">set outputname  AMBER_AD2_12A</span><br><span class="line">set temperature 298</span><br><span class="line"></span><br><span class="line">#############################################################</span><br><span class="line">## Simulation parameters                                   ##</span><br><span class="line">#############################################################</span><br><span class="line">#insert files and force field(section 3.2.1)###########</span><br><span class="line">amber                   on                         #specifies we are using AMBER Prm and CRD files</span><br><span class="line">parmfile                AMBER.prmtop                #specifies we are using AMBER Prm and CRD files</span><br><span class="line">ambercoor               AMBER.inpcrd                #specifies we are using AMBER Prm and CRD files</span><br><span class="line"></span><br><span class="line">#output file (section 3.2.2)#############</span><br><span class="line">outputname              $outputname                #specifies the prefix for the output files</span><br><span class="line">binaryoutput            no                         #activates binary output (yes=binary)</span><br><span class="line">DCDfile                 $outputname.dcd            #specifies the output file name for coordinates trajectory</span><br><span class="line">DCDfreq                  5000                       #number of timesteps between the writing coordinates</span><br><span class="line">restartname             $outputname.restart        #specifies the restart filename</span><br><span class="line">restartfreq              5000                        #number of timesteps between the writing coordinates</span><br><span class="line"></span><br><span class="line">#standard output (section 3.2.3)################</span><br><span class="line">outputEnergies           5000                        #number of timesteps between energy output</span><br><span class="line">outputTiming             5000                        #number of timesteps between timing output</span><br><span class="line">outputMomenta            5000                        #number of timesteps between momenta output</span><br><span class="line">outputPressure           5000                        #number of timesteps between pressure output</span><br><span class="line"></span><br><span class="line">#timestep parameters (section 7.3.1)##########</span><br><span class="line">firsttimestep           0                          #frame number where the simulation starts</span><br><span class="line">timestep                2                          #length of each step in fs</span><br><span class="line">stepspercycle           10                         #how often the interacting particle lists are updated</span><br><span class="line"></span><br><span class="line">#space partitionin (section 5.3.2)#################</span><br><span class="line">cutoff                  12                         #non-bonded cutoff</span><br><span class="line">switching               off                        #switch off for Amber</span><br><span class="line">#switchdist              10                         #distance at which the smoothing function is applied</span><br><span class="line">pairlistdist            14                         #distance &gt;= switchdist for atom pairs to be included in the pairlist</span><br><span class="line">margin                  0                          #extra length in patch dimensions</span><br><span class="line"></span><br><span class="line">#basic dynamics (section 5.3.3)################</span><br><span class="line">exclude                 scaled1-4                  #which bonded atom pairs are excluded from non-bonded calculations</span><br><span class="line">temperature             $temperature               #INITIAL temperature of the simulation note delete on restart</span><br><span class="line">1-4scaling              0.833333                   #1.0 for Charmm, 0.833333 for Amber</span><br><span class="line">scnb                    2                          #This is default for both Amber and Charmm</span><br><span class="line">rigidbonds              all                        #controls how shake is used</span><br><span class="line">rigidTolerance          0.00001                    #allowable bond length error for shake</span><br><span class="line">nonbondedFreq           1                          #number of timesteps between nonbond evaluation</span><br><span class="line">fullElectFrequency      2                          #number of timesteps between full electrostatic evaluations</span><br><span class="line"></span><br><span class="line">#PME parameters (section 5.3.5)###############</span><br><span class="line">PME                     yes                        #turns PME on or off (yes=on no=off)</span><br><span class="line">PMEGridSpacing          1.0                        #standard spacing.  Namd asigns the grid size.</span><br><span class="line"></span><br><span class="line">#periodic boundry conditions (section 6.4.3)#############</span><br><span class="line">cellbasisvector1 75.184  0    0            #defines the first periodic boundary</span><br><span class="line">cellbasisvector2  0  73.832   0            #defines the second periodic boundary</span><br><span class="line">cellbasisvector3  0     0   77.557     #defines the third periodic boundary</span><br><span class="line">cellorigin       -0.066 0.047 -0.147     #defines the xyz location of the center of the box</span><br><span class="line"></span><br><span class="line">#defines file which contains the PBC info from previous runs###########</span><br><span class="line">wrapwater               on                         #wraps the waters to one box.</span><br><span class="line">wrapall                 on                         #wraps every contiguous cluster of bonded atoms</span><br><span class="line">wrapNearest             on                        #wraps coordinates to the nearest image to the origin</span><br><span class="line"></span><br><span class="line">####Fix residues and sub in the QM region##########</span><br><span class="line">fixedAtoms on                                      </span><br><span class="line">fixedAtomsForces on </span><br><span class="line">fixedAtomsFile prolig-fix.pdb </span><br><span class="line">fixedAtomsCol B</span><br><span class="line"></span><br><span class="line">#temperature control and equilibration (section 6.3)##########</span><br><span class="line">langevin                on                         #turns langevin dynamics on or off</span><br><span class="line">langevinTemp            $temperature                        #temp to which langevin dynamics will be adjusted</span><br><span class="line">langevinDamping         5                          #damping coefficient for langevin dynamics</span><br><span class="line">langevinHydrogen        off                        # don&apos;t couple langevin bath to hydrogens</span><br><span class="line"></span><br><span class="line">###pressure control(section 6.3)##########</span><br><span class="line">langevinPiston          on                         #turns on constant pressure</span><br><span class="line">langevinPistonTarget    1.0325                    #target pressure</span><br><span class="line">langevinPistonPeriod    100                        #period over which the pressure is averaged in fs(oscillation time constant)</span><br><span class="line">langevinPistonDecay     50                         #damping time scale in fs</span><br><span class="line">langevinPistonTemp      $temperature              #should be equal to langevin temp</span><br><span class="line">###minimization###########</span><br><span class="line">minimize                 5000</span><br><span class="line"></span><br><span class="line">###equilibration###########</span><br><span class="line">run                     10000000</span><br></pre></td></tr></table></figure>
+<p>通过pbs作业管理系统qsub执行qsub namd.pbs，其中namd.pbs脚本内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">#!/bin/sh -f</span><br><span class="line">#PBS -V</span><br><span class="line">#PBS -N name.pdb</span><br><span class="line">#PBS -j oe</span><br><span class="line">#PBS -l nodes=1:ppn=32</span><br><span class="line">#PBS -l walltime=1000:00:00</span><br><span class="line"></span><br><span class="line">nodecpu=`cat /proc/cpuinfo|grep processor|wc -l`</span><br><span class="line">id=`echo $PBS_JOBID|awk -F. &apos;&#123;print $1&#125;&apos;`</span><br><span class="line">NP=`cat $PBS_NODEFILE|wc -l`</span><br><span class="line"></span><br><span class="line">cd $PBS_O_WORKDIR</span><br><span class="line">charmrun +p 32 namd2 /share/home/maojy/pre_AD2/namd/AMBER.conf &gt; AMBER.log</span><br></pre></td></tr></table></figure>
+<p><strong><center>The End<br>至此完成了namd MD整个过程</center></strong></p>
+<h3 id="font-color-red-appendix-font"><font color="red"> Appendix </font></h3>
+<p><strong>1. Creating .prep file</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">antechamber -i SUB.pdb -fi pdb -o SUB.prep -fo prepi -c bcc -j 4 -at gaff -pf y</span><br></pre></td></tr></table></figure>
+<p><strong>2. Converting .dcd to .pdb</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">catdcd -o dcd2_restart_1500_SUB5A_scan_18_ts1.pdb -otype pdb -s AMBER.pdb -first 4 -last 4 ./dcd2_restart_1500_SUB5A_scan_18_ts1.dcd</span><br></pre></td></tr></table></figure>
+<p><strong>3. Converting .promtop to .top</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acpype -p AMBER.prmtop -x AMBER.inpcrd</span><br></pre></td></tr></table></figure>
+<p><strong>4. Changing the traj of .dcd file (by PBCTools)</strong><br>
+pbc get<br>
+pbc wrap</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/Ph-D/"># Ph.D.</a>
+                    
+                        <a href="/tags/MD/"># MD</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2019/12/19/20191229Hexo建站工具贴2_Valine评论功能/">Hexo建站工具贴2_Valine评论功能</a>
+            
+            
+            <a class="next" rel="next" href="/2019/11/03/随笔/20191103一个很有意思的问题/">一个很有意思的问题</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

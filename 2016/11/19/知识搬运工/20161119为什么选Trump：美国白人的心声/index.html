@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>为什么选Trump：美国白人的心声 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">为什么选Trump：美国白人的心声</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/11/19&nbsp;&nbsp;0:10</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>非常感谢大家。很抱歉让你们久等。太不容易了，真的非常感谢你们。<br>
+Thank you very much everybody. Sorry to keep you waiting. Complicated business. Complicated. Thank you very much.</p>
+<p>我刚才接到了国务卿克林顿打来的电话，她祝贺我们赢得了大选，我也称赞了她和她的家人，他们为了竞选也付出了很多努力。<br>
+I’ve just received a call from Secretary Clinton. She congratulated us, it’s about us, on our victory and I congratulated her and her family on a very, very hard-fought campaign.</p>
+<p>我觉得，她是一个不折不扣的战士。希拉里从政多年一直在努力工作，她为我们的国家付出了很多，我非常诚心的认为我们欠她一份人情。<br>
+I mean, she fought very hard. Hillary has worked very long and very hard over a long period of time and we owe her a major debt of gratitude for her service to our country. I mean that very sincerely.</p>
+<p>现在，所有人应该联合起来，包扎伤口，解决美国社会的分裂问题。 我想对全美所有共和党人、民主党人、独立人士说，我们应该团结合作，万众一心。是时候了。<br>
+Now it’s time for America to bind the wounds of division. We have to get together. To all Republicans and Democrats and independents across this nation, I say, it is time for us to come together as one united people. It’s time.</p>
+<p>我向每一位美国公民宣誓，我将是所有美国人的总统，这对我们至关重要。对于那些之前没有选择支持我的少数美国人，我想告诉你们，我们需要你们的指引和帮助，所有美国人民都应该团结起来，统一我们伟大的祖国。<br>
+I pledge to every citizen of our land that I will be President for all Americans and this is so important to me. For those who have chosen not to support me in the past, of which there were a few people, I’m reaching out to you for your guidance and your help, so that we can work together and unify our great country.</p>
+<p>如同我开头所说，这不是一场竞选活动， 这是无比伟大的政治运动，成千上万热爱祖国的劳动人民团结在一起，为了自己，也为了家人，共同追寻一个更美好、更光明的未来。<br>
+As I’ve said from the beginning, ours was not a campaign but rather an incredible and great movement, made up of millions of hard-working men and women who love their country and want a better, brighter future for themselves and for their family.</p>
+<p>这是属于所有美国人民的政治运动，无论人种、宗教、出身、信仰，每一位美国人都渴望一个为人民服务的政府，而我们新一届政府将会说到做到。同心协力，我们将立即开始重建我们的国家，延续美国梦。<br>
+It’s a movement comprised of Americans from all races, religions, backgrounds and beliefs, who want and expect our government to serve the people and serve the people it will. Working together, we will begin the urgent task of rebuilding our nation and renewing the American dream.</p>
+<p>我的一生都在商界驰骋，在世界各地寻找充满潜力的人才和项目。现在，我想为祖国做同样的事。我们的国家有着巨大的发展潜力，我太了解我们的祖国了， 如此巨大的发展潜力，这是国之大幸。每一个美国人都将有机会去实现自己的美国梦，那些被遗忘的人们也将得到尊重。<br>
+I’ve spent my entire life in business looking at the untapped potential in projects and in people all over the world. That is now what I want to do for our country. Tremendous potential. I’ve gotten to know our country so well. Tremendous potential. It’s going to be a beautiful thing. Every single American will have the opportunity to realize his or her fullest potential. The forgotten men and women of our country will be forgotten no longer.</p>
+<p>我们将修复我们的旧城区，重建我们的高速公路、桥梁、隧道、机场、学校、医院。 我们将重建我们的基础设施，达到首屈一指的标准。同时，我们也会和数百万美国劳动人民一起工作，重建我们的国家。<br>
+We are going to fix our inner cities and rebuild our highways, bridges, tunnels, airports, schools, hospitals. We’re going to rebuild our infrastructure. Which will become, by the way, second to none. And we will put millions of our people to work as we rebuild it.</p>
+<p>我们还会照顾好我们的退伍军人，他们对国家一直是那么忠心，过去18个月的竞选之路上，我有幸认识了很多退伍军人，和他们相处是我一生最荣幸的时刻。我们的退伍军人都是了不起的人。<br>
+We will also finally take care of our great veterans. They’ve been so loyal and I’ve gotten to know so many over this 18-month journey. The time I’ve spent with them during this campaign has been among my greatest honours. Our veterans are incredible people.</p>
+<p>我们将大力发展国家经济，实现祖国的复兴。我将选贤任能，聘请最优秀最出色的人才为国出力，造福所有美国人，说到做到。<br>
+We will embark upon a project of national growth and renewal. I will harness the creative talents of our people and we will call upon the best and brightest to leverage their tremendous talent for the benefit of all. It’s going to happen.</p>
+<p>我们准备了一份伟大的经济发展计划。我们将加倍我们的经济增长，成为全球第一的经济强国。与此同时，我们将和所有愿意合作共赢的国家成为朋友，我们可以做到。我们将和其他国家处好关系。我们期望我们能和其他国家成为很好的合作伙伴。<br>
+We have a great economic plan. We will double our growth and have the strongest economy anywhere in the world. At the same time we will get along with all other nations willing to get along with us. We will be. We will have great relationships. We expect to have great, great relationships.</p>
+<p>梦想永无止境，挑战永无止境，未来，没有什么是不能实现的。<br>
+No dream is too big, no challenge is too great. Nothing we want for our future is beyond our reach.</p>
+<p>我们将不再满足于现状，我们会追求卓越。美国人民应该主宰自己的命运，做勇敢的追梦人。这是我们应该做的，为了祖国，我们将帮助大家实现心中的美国梦， 再现美好，再创辉煌。<br>
+America will no longer settle for anything less than the best. We must reclaim our country’s destiny and dream big and bold and daring. We have to do that. We’re going to dream of things for our country, and beautiful things and successful things once again.</p>
+<p>我想对国际社会说，我们将把美国的利益放在第一位，我们也将公平公正对待世界上每一个人，每一个国家。<br>
+I want to tell the world community that while we will always put America’s interests first, we will deal fairly with everyone, with everyone. All people and all other nations.</p>
+<p>我们将求同存异，合作共赢，拒绝冲突。<br>
+We will seek common ground, not hostility; partnership, not conflict.</p>
+<p>现在，我想对我人生路上帮助过我的人表示感谢，他们都说今晚是一场震古烁今的胜利。<br>
+And now I would like to take this moment to thank some of the people who really helped me with this, what they are calling tonight a very, very historic victory.</p>
+<p>首先，我想感谢我的父母，我知道他们正在天堂注视着我。他们是非常优秀的人，我从他们身上学了太多太多。 从每一个方面看，他们都是那么的出色，我的父母真是太伟大了。<br>
+First, I want to thank my parents, who I know are looking down on me right now. Great people. I’ve learned so much from them. They were wonderful in every regard. Truly great parents.</p>
+<p>我想感谢我的姐姐，玛丽安和伊丽莎白，她们今晚也在现场。她们在哪？她们在现场某处，其实她们是很害羞的人。还有我的弟弟罗伯特，他也是我最好的朋友。罗伯特在哪？ 罗伯特在哪？包括我弟弟罗伯特在内，我所有的家人都应该到台上来，他们真的很棒。 还有我已故的哥哥佛雷德，他是个好人，非常出色的人。我们的家人都是那么优秀。我真是太幸运了，因为我的兄弟姐妹都是那么伟大，还有我无比伟大的父母。<br>
+I also want to thank my sisters, Marianne and Elizabeth, who are here with us tonight. Where are they? They’re here someplace. They’re very shy, actually. And my brother Robert, my great friend. Where is Robert? Where is Robert? My brother Robert, and they should be on this stage, but that’s okay. They’re great. And also my late brother Fred, great guy. Fantastic guy. Fantastic family. I was very lucky. Great brothers, sisters, great, unbelievable parents.</p>
+<p>梅拉尼娅、小唐纳德、伊万卡、埃瑞克、蒂芙尼还有巴伦，我爱你们，谢谢你们，过去的这几个小时，真是太艰难了，真的太难了，政治这个东西真是险恶，真不容易。所以，我想对我的家人表示感谢，你们太出色了，感谢你们大家，感谢。<br>
+To Melania and Don. And Ivanka. And Eric. And Tiffany. And Barron. I love you, and I thank you and especially for putting up with all of those hours. This was tough. This was tough. This political stuff is nasty and it’s tough. So I want to thank my family very much. Really fantastic. Thank you all. Thank you all.</p>
+<p>罗拉，你的工作干得太漂亮了，难以置信。瓦妮莎，谢谢你。非常感谢你们，多么棒的竞选团队啊。你们大家给了我太多支持和帮助，我想告诉大家我们有一个很大的团队。有很多人一直在说我们团队没有多少人。但真不少，看看我们团队的人吧，看一看吧。凯莉安、克里斯、鲁迪、史蒂夫、大卫。我们的竞选团队里有很多很多优秀的人才，我想对你们说，你们的陪伴，对我而言真是太特别了。<br>
+Lara, unbelievable job, unbelievable. Vanessa, thank you, thank you very much. What a great group. You’ve all given me such incredible support and I will tell you that we have a large group of people. You know, they kept saying we have a small staff. Not so small. Look at all the people that we have. Look at all these. And Kellyanne and Chris and Rudy, and Steve, and David. We have got, we have got tremendously talented people up here. And I want to tell you, it’s been, it’s been very, very special.</p>
+<p>我想特别感谢纽约市的前市长，鲁迪朱利安尼。他是个非常出色的人。一路上，他陪伴着我们，参与各种会议，鲁迪从未变过。鲁迪在哪？他人呢？<br>
+I want to give a very special thanks to our former mayor, Rudy Giuliani. He’s unbelievable. Unbelievable. He traveled with us and he went through meetings, and Rudy never changes. Where is Rudy? Where is he?</p>
+<p>州长克里斯克里斯蒂是那么优秀。谢谢你，克里斯。他是第一个支持我的人，也是第一个支持我的参议员和高官。我想告诉你们，在华盛顿，他非常受人尊敬，因为他是一个出类拔萃的人。<br>
+Gov. Chris Christie, folks, was unbelievable. Thank you, Chris. The first man, first senator, first major, major politician. Let me tell you, he is highly respected in Washington because he is as smart as you get.</p>
+<p>参议员杰夫塞申斯。杰夫在哪？他是个伟大的人，非常强硬的对手，他真的不好对付。<br>
+Sen. Jeff Sessions. Where is Jeff? A great man. Another great man, very tough competitor. He was not easy. He was not easy.</p>
+<p>那是谁？是市长鲁迪吗？他来了。<br>
+Who is that? Is that the mayor that showed up? Is that Rudy? Up here.</p>
+<p>我还有一个好朋友，我想告诉你们，我们刚认识的时候，他是我的对手。当时他也一起参与商量如何应对民主党，本卡森医生，他人在哪？<br>
+Really a friend to me, but I’ll tell you, I got to know him as a competitor because he was one of the folks that was negotiating to go against those Democrats, Dr. Ben Carson. Where’s Ben? Where is Ben?</p>
+<p>顺便说一下，麦克哈克比也在现场，他非常优秀。我想感谢麦克和她的女儿莎拉。麦克弗林将军在吗？还有凯洛格将军。有超过200位将军和海军上将支持我们的竞选运动，他们是非常特别的人， 这是我的荣幸。还有22位国会荣誉勋章获得者也支持我们。我们的竞选运动有着大量的支持者。<br>
+By the way, Mike Huckabee is here someplace, and he is fantastic. Mike and his family Sarah, thank you very much. Gen. Mike Flynn. Where is Mike? And Gen. Kellogg. We have over 200 generals and admirals that have endorsed our campaign. They’re special people, and it’s an honour. We have 22 congressional medal of honour recipients. We have just tremendous people.</p>
+<p>还有一位非常特别的人，相信我，有些报道写我和他合不来。其实我和他很要好。他是一个超级大明星。他是…猜对了，你是如何猜到的啊？让我来聊一聊瑞斯，我说过了，瑞斯，我就知道，看一看为他欢呼的人，瑞斯真是一个大明星。但是，我曾说过，瑞斯，要等我们赢下选举你才能被称作大明星。就像秘书处一样，如果秘书处只得了第二名，那么，那座为它而造的高大美丽的半身铜像，将不会竖立在贝尔蒙赛马场上。好伙计，你这么做就对了。我的老天啊，过来，和大家说两句话吧。<br>
+A very special person who, believe me, I read reports that I wasn’t getting along with him. I never had a bad second with him. He’s an unbelievable star. He is …That’s right. How did you possibly guess? So let me tell you about Reince, and I’ve said this. I said, Reince — and I know it, I know. Look at all those people over there. I know it. Reince is a superstar. But I said, “They can’t call you a superstar, Reince, unless we win,” because you can’t be called a superstar — like Secretariat — if Secretariat came in second, Secretariat would not have that big, beautiful bronze bust at the track at Belmont. Reince is really a star and he is the hardest-working guy, and in a certain way I did this. Reince, come up here. Get over here, Reince. Boy, oh, boy, oh, boy. It’s about time you did this right. My god. Nah, come here. Say something.</p>
+<p>(瑞斯：女士们，先生们，美利坚合众国的下一任总统，唐纳德川普！谢谢你们，这是我的荣幸。<br>
+Reince: Ladies, gentlemen, the next president of united states, Donald Trump! Thank you, it’s been an honour)</p>
+<p>瑞斯太棒了。<br>
+Amazing guy.</p>
+<p>我们和共和党全国委员紧密合作，赢下大选。<br>
+Our partnership with the RNC was so important to the success and what we’ve done.</p>
+<p>我还想说一下，我有幸认识了很多了不起的人。比如特情人员，他们顽强又机敏，我也不敢惹他们。我可以告诉大家，有时候我边挥手边靠近支持我的人群，特勤人员总是会迅速把我拉回车坐下。不管怎样，我都觉得他们是了不起的人，这就是为什么我想向他们表示感谢。<br>
+So I also have to say, I’ve gotten to know some incredible people. The Secret Service people. They’re tough and they’re smart and they’re sharp and I don’t want to mess around with them, I can tell you. And when I want to go and wave to a big group of people and they rip me down and put me back down in the seat, but they are fantastic people so I want to thank the Secret Service.</p>
+<p>纽约市执法人员今晚也在现场。很不幸的是，这些无比伟大的人却经常被轻视。我们对他们心怀感激，因为我们知道他们究竟克服了多少困难。<br>
+And law enforcement in New York City, they’re here tonight. These are spectacular people, sometimes underappreciated unfortunately. But we appreciate them, we know what they go through.</p>
+<p>大家都把今晚的活动称为历史性的一刻，但若真想名流千古，我们得干出一番伟大的事业，我向你们保证我不会让你们失望。我们会把国家建设的更好。我很期待成为你们的总统，希望两年后，也许是三年后或者四年后，如果可能的话，八年后，我知道你们一直在努力奋斗，到时候你们会肯定会说，你们很荣幸能为国出力。<br>
+So it’s been what they call a historic event, but to be really historic, we have to do a great job, and I promise you that I will not let you down. We will do a great job. We will do a great job. I look very much forward to being your president, and hopefully at the end of two years or three years or four years or maybe even eight years you will say so many of you worked so hard for us, with you. You will say that – you will say that that was something that you were, really were very proud to do.</p>
+<p>非常感谢你们。<br>
+Thank you very much.</p>
+<p>我想说虽然竞选已经结束了，但是，我们的政治运动才刚刚开始。为了美国人民，我们会继续奋斗，我们将为美国人民做很多很多的事，我希望我能成为你们的骄傲。你们一定为以我为荣。我想再说一次，能为人民服务是我的荣幸。<br>
+And I can only say that while the campaign is over, our work on this movement is now really just beginning. We’re going to get to work immediately for the American people, and we’re going to be doing a job that hopefully you will be so proud of your President. You will be so proud. Again, it’s my honour.</p>
+<p>这是一个美妙的夜晚。这两年的竞选之路对我而言是那么的特别，我真的深深的爱着这个国家。<br>
+It’s an amazing evening. It’s been an amazing two-year period, and I love this country.</p>
+<p>谢谢大家，非常感谢你们，感谢麦克彭斯。<br>
+Thank you. Thank you very much. Thank you to Mike Pence.</p>
+<p>（观众：USA！USA！USA！）</p>
+<p>作者：兔子君<br>
+链接：<a href="http://zhuanlan.zhihu.com/p/23592020" target="_blank" rel="noopener">http://zhuanlan.zhihu.com/p/23592020</a><br>
+来源：知乎<br>
+著作权归作者所有，转载请联系作者获得授权。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/11/20/知识搬运工/20161120川普胜选演讲翻译（汉英对照版）/">川普胜选演讲翻译（汉英对照版）</a>
+            
+            
+            <a class="next" rel="next" href="/2016/11/01/随笔/20161101我。当。舅舅。了/">我。当。舅舅。了</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

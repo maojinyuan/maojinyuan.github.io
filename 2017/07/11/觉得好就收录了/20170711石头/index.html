@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>《石头》 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">《石头》</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2017/07/11&nbsp;&nbsp;22:08</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>是的，我总是喜欢一个人在河边捡石头。由于我的“喜欢”，石头们被分成了好看和不好看的两种。由于我的喜欢，世界微微失衡。</p>
+<p>好在我的这种“喜欢”力量微薄，不足以影响真正的现实世界。顶多影响一下我对两块石头的取舍，顶多影响两块石头的命运吧。</p>
+<p>我反复对比，放弃了一块石头，占有了另一块。</p>
+<p>但被我占有的石头从此之后真的就属于我了吗？</p>
+<p>不是的，从此之后，它只是和我并列在出现在这个世界上而已。</p>
+<p>贪婪与“喜爱”的不同之处在哪里？……每当我独自走在大风中的高高河岸上，看向对岸缠绵起伏的金色沙丘，再看向秋天深蓝无底的天空，长久注目悬于夕阳一侧的半透明的圆月……</p>
+<p>便暗暗否定了自己曾深深坚信的很多东西。</p>
+<p>当我生活在更加荒凉遥远的南面冬牧场上时，闲暇时间也喜欢在沙漠中长时间散步，寻找脚下的美丽碎片。</p>
+<p>牧羊人居麻看着我入迷地把玩那些彩色小石子，便问我：“它们值多少钱？”</p>
+<p>我说：“不值钱。但我觉得很好看。”</p>
+<p>他表示怀疑。他感慨地说：“这种事只有你们汉族人才知道。你们一看就知道哪块石头值钱。你们专门开几百公里的车来到我们的戈壁滩上捡石头。我们呢，世世代代在这里放羊，天天踩过那么多石头，却什么也不知道。没办法，我们什么也不懂，我们捡的石头都卖不了钱。”</p>
+<p>他坚信有一个关于石头的秘密掌握在少数人手里。</p>
+<p>他捏起我的一块石头看了又看。再次感慨自己的命运。</p>
+<p>我说：“我只是喜欢它的颜色而已，看，红红的！”</p>
+<p>他仍然不相信。</p>
+<p>我妈坐了三百公里的班车来阿勒泰市看我，双手空空，就背了两块石头。</p>
+<p>我问：“这是啥？”</p>
+<p>她神秘又兴奋：“戈、壁、玉！”</p>
+<p>我说：“我要它干嘛？”</p>
+<p>她说：“不是给你的，只是带来给你看看的。”</p>
+<p>是的，连我妈这样生活在穷乡僻野的乡下人都开始捣鼓石头了。</p>
+<p>在北疆，无论是216国道线还是217国道线，沿着荒凉空旷的公路上下，几乎每过一百公里就可看到几顶帐篷，三五个卖石头的摊位。</p>
+<p>那些石头从表面看上去灰头土脸、普通至极。但剖开后，却有着透明而梦幻的内瓤。</p>
+<p>我觉得很多时候，它所谓的“价值”并非在于它的美丽，而在于它的这种反差吧？</p>
+<p>是的，大家为这种石头冠名为“戈壁玉”。</p>
+<p>戈壁玉真多啊。</p>
+<p>我妈回四川，思量着给老家的亲戚朋友带点啥土产好，既要实惠，还得体面。</p>
+<p>想来想去，她从我家院墙墙根儿处的地基上拆下来一块石头。</p>
+<p>她抱进城里，找了个玉石加工的小作坊，花了一百块钱给切开，打了一大串手镯……</p>
+<p>回到老家，见人就发，大方得不得了。</p>
+<p>大家人手一个，戴着瞅啊瞅啊，神情丰富，有喜悦也有疑惑。</p>
+<p>坦率地说，作为饰品，戈壁玉一点也不好看。色泽脏污，躁气十足。</p>
+<p>虽然名字被冠以“玉”，但毕竟不是玉。玉应该是更细腻绵密的质地，有着更柔和的光泽。</p>
+<p>作为荒野中的存在，戈壁玉的确是美丽的，甚至令人眩目。可一旦离开荒野，离开纯粹的蓝天和粗砾的大地，它的美丽便迅速枯萎。</p>
+<p>在海南三亚，在全国离阿勒泰最遥远的地方，我也曾见过我们的戈壁玉。满满的，一板车又一板车，堆在街头叫卖。各种形状的吊坠、配饰，十元三件。如塑料制品一样面无表情，如塑料制品一样廉价，同时，如塑料制品一样千篇一律。</p>
+<p>戈壁玉真的很多吗？</p>
+<p>似乎石头的数量远远大于荒野的广阔。遍地都是，掘地三尺仍是，全国都是。我家院墙下一大堆。若我妈把墙拆了统统打成镯子，哪怕十元三个也能卖好几万。</p>
+<p>可是，一边是戈壁玉成山成海的盛况，另一边，却是大地的千疮百孔。</p>
+<p>才开始，人们只是在节假日里当作野游一样去郊外捡拾着玩耍。他们把车停在公路边，沿着公路上下行走，碰运气一般翻找大地表层的石头。</p>
+<p>后来越来越多的人开始专职干这个。他们越走越远，越来越深入。搜罗了遍大地的每一个角落。</p>
+<p>才开始，他们开着小四轮拖拉机进入荒野。后来，开着挖掘机进入。</p>
+<p>疯狂开采的后果也许就是“十元三个”吧。</p>
+<p>街头散步的小情侣，嘻笑中随意挑选了三个。刚拿回家，新鲜劲儿就过了，随手扔进角落。</p>
+<p>毕竟它既不好看，也不昂贵。</p>
+<p>可是，我却知道这块平凡的小小玉石有着比世界上任何一个凡人都壮阔崎岖的经历。我几乎亲眼看到它碎裂于洪荒时代的大地震时期。看着它被海水冲击亿万年。海枯石烂之后，又被泥石流埋没亿万年。</p>
+<p>接下来，日复一日的风吹日晒，终于有一天它重见天日，躺在球上一条平凡的河流边，天衣无缝地镶嵌在一个平凡的泥土凹窝里。</p>
+<p>我还看到了它的最后一幕记忆。</p>
+<p>看到它被暴力挖开，露出身下和自己同样形状的洞窟。看到虫子四散奔逃，植物白嫩的根系坦曝在日光暴晒之中。</p>
+<p>更多的石头在挖掘机的操作下源源不断翻出大地。失陷绝地的蚂蚁们不知所措。一个个保护着蚁后，衔着蚁卵，面对眼下没完没了天翻地覆的世界，不知逃往何处。</p>
+<p>一窝蚂蚁的毁灭，其惨烈不亚于一个王国的覆灭吧？</p>
+<p>亿万万蚁窝和虫穴的毁灭，亿万万微小的惊骇与怨恨游荡天地之间，无处可去，便依附于戈壁玉。附着在它的色泽上，附着在它所有细微的裂缝里。</p>
+<p>所以戈壁玉的颜色黯淡压抑，所以戈壁玉的饰物一碰即碎。</p>
+<p>还有人不明白城市午夜的街头为什么如此哀凉无望。他经过成堆批发戈壁玉的地摊，还是不能明白。</p>
+<p>去年那场大旱，不止令农业受灾，牧业也遭到极大重创。</p>
+<p>一位年长的牧人痛心地说：“捡石头！都是捡石头的人害的！”</p>
+<p>他的意思大约是，捡石头改变了大地的面貌，而这与天气变化息息相关。</p>
+<p>他的说法有点像汉族的“风水”说。</p>
+<p>虽说是迷信，但我妈毫不犹豫地表示认同。她是灾年的受害者，关于灾难的一切解释都全盘接受。</p>
+<p>其实我妈也幻想过靠捡石头发财。</p>
+<p>她在戈壁滩上生活，常常看着一辆辆外地车辆深入南面荒野，再满载而归，难免蠢蠢欲动。</p>
+<p>可她太穷，一时负担不了投入。便到处忽悠熟人，想与人合伙雇卡车挖戈壁玉。</p>
+<p>幸亏没人响应她。</p>
+<p>最后只好选择种地……</p>
+<p>可是在荒野中种植葵花和在荒野中挖掘石头有什么不同呢？</p>
+<p>都是掠夺。用挖掘机掠夺，用大量的化肥掠夺。紧紧地攥住大地的海绵，勒索到最后一滴液体。</p>
+<p>我仍然喜欢石头。我喜欢长时间蹲在河边的空地上，一块一块地翻捡，摸索，不停地惊异于每一块石头的独一无二。</p>
+<p>当我埋首大地，沉迷于眼下这石头的世界，在地球的另一端，漫漫迁徙道路上的海鸟再也看不到去年露出水面的礁石。</p>
+<p>我又拾起一块石头。看到石头下的空穴里有弯弯曲曲的细小道路，被突然曝光的虫子惊慌不已。</p>
+<p>我改变了这只虫子的命运。</p>
+<p>也许还改变了更多——季节、气候、降雪量。</p>
+<p>甚至是冰川融化、雪线后退。甚至是全球变暖。</p>
+<p>全球变暖了，海平面上升了。我目睹那只海鸟在无望的寻找中筋疲力尽，最终跌落大海。</p>
+<p>而在此地，在我的脚下，在全世界离海洋最远的地方，在大陆的最深处，我又看到另一块美丽的石头。却迟迟不敢触碰。</p>
+<p><strong><div align="right">——李娟</div></strong></p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2017/08/12/随笔/20170812《我的前半生》剧评/">《我的前半生》剧评</a>
+            
+            
+            <a class="next" rel="next" href="/2017/07/10/随笔/20170709睡眠是什么？/">睡眠是什么？</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

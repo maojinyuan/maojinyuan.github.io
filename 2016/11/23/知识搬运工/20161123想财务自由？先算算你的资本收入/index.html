@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>想财务自由？先算算你的资本收入 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">想财务自由？先算算你的资本收入</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/11/23&nbsp;&nbsp;19:47</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>大概在两三年前，法国经济学家托马斯•皮凯蒂的《21世纪资本论》一度风靡全球，成为近年来少见的经济学畅销书。作者在研究了300年来20多个欧美国家的财富分配史之后得出结论，欧美发达国家的贫富差距在最近几十年来越来越大，而导致这种现象的主要原因在于资本收入相对劳动收入增长过快所致。</p>
+<p>《21世纪资本论》这本书考察的对象虽然是欧美国家，对中国经济其实也同样成立，当前中国中产阶层日渐增长和蔓延的生存焦虑，很大程度上都可以用皮凯蒂的结论来解释。皮凯蒂认为资本收入是导致贫富差距越来越大的主要原因，换而言之，资本收入的快速增长使得富裕阶层的财富增长越来越快，而仅仅依靠劳动收入的平民阶层，其财富水平只能和富裕阶层差距越拉越大。</p>
+<p>这其实也正是中国经济的真实写照。过去20年来，资本收入在中国的收入分配体系中扮演了越来越重要的角色，尤其是房地产市场，成为改写中国社会财富分配的重要途径。在很多一、二线城市，房产成为家庭最重要的资产，相比房产带来的资本增值，很多人的劳动收入几乎可以忽略不计。如果以房价涨幅作为参照物，大多数人的工资收入其实是在不断缩水。10年前，一个中产一个月的工资或许在北京能够买一平方米的房，而现在可能需要付出半年的工资。由于中国的通胀指数并未将房价计算在内，因此实际的通胀水平其实远高于公开的CPI数据，如果将高涨的房价计算在内，中产阶层的实际收入水平其实呈现严重缩水的趋势。面对实际收入水平的显著下降，中产阶层的焦虑和压力也就不难想象，很多曾经的中产阶层，在高涨的房价和生存压力面前，或许正面临退出中产阶层的可能。你是否自认为是中产阶层，可以自问三个问题：一、房贷是否给你的生活带来了很大的压力？二、你是否不打算结婚，或不打算生儿育女？三、孩子未来的教育费用是否让你忧心忡忡？如果有任何一个答案为“是”，你就不算中产阶层。这是日本学者大前研一10年前对日本中产阶层的定义，如果以这样的标准来看待今天中国的中产阶层，恐怕有很多人正在滑向中产的边缘。</p>
+<p>在当前的中国社会，以房产、股票为主的资本主导了财富的分配路径，资本越丰富的人，财富增值的速度越快，而仅仅依靠劳动收入，在财富分配格局下越来越边缘化，除了极少数高薪人群，劳动收入阶层几乎看不到向上改变命运的希望。这也就不难理解，最近的税收改革将年收入12万元定义为高收入人群并计划加税，迅速引发了强烈反弹，虽然最终证明这只是传言，但中产阶层对于收入的不满，以及面对生存压力的脆弱情绪已经可见一斑，任何一项多余的开支都可能成为压垮中产的那根稻草。</p>
+<p>这种现状也反过来刺激更多人疯狂拥抱资本，中国的房地产市场一轮又一轮地暴涨，很大程度上就是因为房产寄托了人们改变自身命运的希望。最近几年风起云涌的创业大潮，其实也折射了人们对于财富分配的焦虑，越来越多的年轻人加入创业队伍，除了其中极少数人确有创业的能力和勇气之外，更多的人只是意识到依靠工资收入无法实现更好的生存，不得不选择创业，希望最终获得资本的青睐，可以一夜之间改变自身命运。以今天北京、上海等一线城市的房价来看，初入职场的年轻人想要靠工资收入拥有自己的住房，已经成为一件极小概率事件，或者依靠父母，或者拥抱资本，否则只能放弃梦想。</p>
+<p>对于大多数人而言，寄望通过资本收入改变命运，当然并非易事。尤其是最近几年中国经济面临越来越严重的资产荒，各类资产的收益率普遍下降，普通人获得资本收益可谓难上加难。不过，这也并不意味着全无机会，如果观察最近几年中国各类资产的表现，在资产荒之下，其实还是涌现出了很多的投资机会。对于中产阶层而言，如果能够把握住各类资产轮动的节奏，也完全有机会通过资本收入实现人生逆袭，现实生活当中，其实并不乏这样的赢家。</p>
+<p>我所认识的人当中就有这样一位：60年代生人，10年前还只是一位标准的中产阶层，因为对于股票投资颇有研究，后来转为职业投资人，在股票市场积累了10多亿元的身家，现在已是A股市场颇有名气的“牛散”。这一次我们杂志操作这期投资理财的封面，我原本想邀请他接受我们杂志的采访，和读者分享他的投资经历和思路，只是他素来低调，几番犹豫后最终婉拒了我的邀请。他说，目前基本处于半退休状态，寄情于山水之中，所以并不太想抛头露面。这位投资高手并没有任何特殊背景，完全依靠自身的努力，通过资本市场实现了从中产到财务自由的飞跃。对于大多数人而言，想要达到这样的高度显然并不易复制，不过其成功之路至少还是提供了当前中国社会的一种可能性，虽然不易，但还是可行。</p>
+<p>最近几年国内虽然资产荒蔓延，其实投资机会还是不断涌现，理论上而言，还是给中产阶层提供了逆袭的可能。比如2015年的股票牛市，当时沪指涨幅一倍多，个股涨幅两三倍的比比皆是。在当时普遍使用杠杆的行情下，投资者获取超额收益的机会还是很多，虽然后来爆发了惨烈的股灾，让很多人不仅回吐了收益，而且被大幅套牢，但是如果能够提前逃顶，那一轮股市其实还是近年来难得的一次资本快速增值的机会。在去年6月份股灾破灭之后大概半年时间，一线城市的楼市开始升温，并且持续高烧了3个季度，如果能够在去年股灾之前逃顶，携去年牛市的收益提前进入楼市，资产增值的幅度也将相当可观。当更多人在抱怨股灾爆发、楼市暴涨的同时，少数人却将其视为难得的财富机会。<br>
+仅仅过去一年多来，股市和楼市的轮动就已经提供了足够的财富空间，而这种机会在未来也还会不断涌现。在去年6月份股灾破灭之后，股市已经在熊市挣扎了一年多时间，现在随着房地产市场开始新一轮调控，楼市的投资空间暂时下降，那么股市是否会重新迎来一轮机会？从现在来看，股市表现依然低迷，还没有从上一轮股灾创伤中走出来的投资者依然信心不足，不过，当前的低迷也并不意味着未来没有机会，机会往往是在大多数人都不注意甚至怨声载道时悄然到来。</p>
+<p>股市、楼市之外，债券、外汇、商品市场等等，每一次资本市场的波动起伏，都是一轮财富重新洗牌的过程，对于中产阶层而言，每一次市场的波动，其实也就意味着一次财务自由的可能性。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/11/24/随笔/20161124虚拟表情/">虚拟表情</a>
+            
+            
+            <a class="next" rel="next" href="/2016/11/22/知识搬运工/20161122读史时，哪些故事让你动容？/">读史时，哪些故事让你动容？</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

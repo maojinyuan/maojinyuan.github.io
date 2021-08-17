@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>归档 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="post-wrap archive">
+    
+    
+        
+
+        
+            <h3>2020</h3>
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2020/07/25/20200725Hexo建站工具贴3_Chow Bill搜索功能/">Hexo建站工具贴3_Chow Bill搜索功能</a>
+            <span class="archive-item-date">2020/07/25</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2020/05/24/随笔/20200524扫描家中旧文件有感/">20200524扫描家中旧文件有感</a>
+            <span class="archive-item-date">2020/05/24</span>
+        </article>
+    
+        
+
+        
+            <h3>2019</h3>
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/31/觉得好就收录了/20191227《Yesterday》/">《Yesterday》</a>
+            <span class="archive-item-date">2019/12/31</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/27/觉得好就收录了/20191227《默契》歌词/">《默契》</a>
+            <span class="archive-item-date">2019/12/27</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/27/觉得好就收录了/20191227《三角志》歌词/">《三角誌》</a>
+            <span class="archive-item-date">2019/12/27</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/26/让我看看是哪位博士秃头了/20190918Shell & Linux/">Shell &amp; Linux</a>
+            <span class="archive-item-date">2019/12/26</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/22/让我看看是哪位博士秃头了/20191222业内大牛或兴趣相关做的方向/">业内大牛或个人兴趣相关的方向</a>
+            <span class="archive-item-date">2019/12/22</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/21/随笔/20191221音乐分类(待编辑)/">音乐分类</a>
+            <span class="archive-item-date">2019/12/21</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/20/让我看看是哪位博士秃头了/20191219软物质概述/">软物质概述</a>
+            <span class="archive-item-date">2019/12/20</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/20/觉得好就收录了/20191220《一无所有》歌词/">《一無所有》</a>
+            <span class="archive-item-date">2019/12/20</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/19/20191229Hexo建站工具贴2_Valine评论功能/">Hexo建站工具贴2_Valine评论功能</a>
+            <span class="archive-item-date">2019/12/19</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/12/19/让我看看是哪位博士秃头了/20191219The process of MD by AMBER&NAMD/">The process of MD by AMBER&amp;NAMD</a>
+            <span class="archive-item-date">2019/12/19</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/随笔/20191103一个很有意思的问题/">一个很有意思的问题</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/觉得好就收录了/20191103如果/">如果</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/觉得好就收录了/20191103我见过/">《我见过》</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/觉得好就收录了/20191103《人》/">《人》</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/觉得好就收录了/20191103《挑妈妈》/">《挑妈妈》</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/觉得好就收录了/20191103《秘密》/">《秘密》</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/11/03/觉得好就收录了/20191103一首很好的诗/">一首好诗</a>
+            <span class="archive-item-date">2019/11/03</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/23/觉得好就收录了/20191023“高傲的知识”和“寻常的生活滋味”/">“高傲的知识”和“寻常的生活滋味”</a>
+            <span class="archive-item-date">2019/10/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/16/随笔/20191017港剧想法/">港剧看法</a>
+            <span class="archive-item-date">2019/10/16</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/16/随笔/20191016房市-中国特色社会主义赚钱体系/">房市-中国特色社会主义赚钱体系</a>
+            <span class="archive-item-date">2019/10/16</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/16/觉得好就收录了/20191011形容一种爱慕/">形容一种爱慕</a>
+            <span class="archive-item-date">2019/10/16</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/11/觉得好就收录了/20191011《不拖不欠》歌词/">《不拖不欠》</a>
+            <span class="archive-item-date">2019/10/11</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/11/觉得好就收录了/20191011《心淡》歌词/">《心淡》</a>
+            <span class="archive-item-date">2019/10/11</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/10/觉得好就收录了/20191010华而不实/">《华而不实》</a>
+            <span class="archive-item-date">2019/10/10</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/10/觉得好就收录了/20191010岁月钟声/">《岁月钟声》</a>
+            <span class="archive-item-date">2019/10/10</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/10/觉得好就收录了/20191010谚语/">谚语</a>
+            <span class="archive-item-date">2019/10/10</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/10/觉得好就收录了/20191010理想的读书方法/">理想的读书方法</a>
+            <span class="archive-item-date">2019/10/10</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/10/觉得好就收录了/20191010三个人/">《三个人》</a>
+            <span class="archive-item-date">2019/10/10</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/10/10/觉得好就收录了/20191010星星的苦恼/">星星的苦恼</a>
+            <span class="archive-item-date">2019/10/10</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/27/让我看看是哪位博士秃头了/galamost常用快捷指令/">galamost常用快捷指令</a>
+            <span class="archive-item-date">2019/09/27</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/25/知识搬运工/20190925markdown_emoji/">markdown_emoji</a>
+            <span class="archive-item-date">2019/09/25</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923男色经济学/">男色经济学</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923换个角度理解世界/">换个角度看世界</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/随笔/20190923父亲的爱好/">父亲的爱好</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923我从未见过/">《我从未见过》</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923有意思的小说/">有意思的小说</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/随笔/20190923工作狂/">工作狂</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923面对伟大/">面对伟大</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923责任和自由/">责任和自由</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923看，人类在干嘛呢？/">看，人类在干嘛呢？</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923惊艳的比喻/">惊艳的比喻</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923生活和艺术/">艺术和生活</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923表情和人的距离/">表情和人的距离</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923小朋友眼中的强大/">小朋友眼中的强大</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/觉得好就收录了/20190923弦乐四重奏形象比喻/">弦乐四重奏形象比喻</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/随笔/20190923喜好/">喜好</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/09/23/随笔/20190923拥有“向下兼容能力”的人/">拥有“向下兼容能力”的人</a>
+            <span class="archive-item-date">2019/09/23</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/05/07/随笔/20190507《long vacation》观后感/">《long vacation》观后感</a>
+            <span class="archive-item-date">2019/05/07</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2019/05/07/随笔/20190507广州之行/">广州之行</a>
+            <span class="archive-item-date">2019/05/07</span>
+        </article>
+    
+        
+
+        
+            <h3>2018</h3>
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/12/02/随笔/20181202上帝的安排/">上帝的安排</a>
+            <span class="archive-item-date">2018/12/02</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/11/24/觉得好就收录了/20181124《消失的早晨》/">《消失的早晨》</a>
+            <span class="archive-item-date">2018/11/24</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/10/18/随笔/20181018我所敬佩的身边的人/">我所敬佩的身边的人</a>
+            <span class="archive-item-date">2018/10/18</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/10/18/知识搬运工/20181018源于兴趣，终于坚持/">“源于兴趣，终于坚持” 的几个小故事</a>
+            <span class="archive-item-date">2018/10/18</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/10/18/知识搬运工/20181018范冰冰逃税事件的一些值得一读的观点/">范冰冰逃税事件的一些值得一读的观点</a>
+            <span class="archive-item-date">2018/10/18</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/10/18/知识搬运工/20181018一张经济崩溃可能演变的过程/">经济崩溃可能演变的过程</a>
+            <span class="archive-item-date">2018/10/18</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/10/18/随笔/20181018这个世界的三观怎么了？都大学生了呀！/">这个世界的三观怎么了？都大学生了呀！</a>
+            <span class="archive-item-date">2018/10/18</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/09/26/知识搬运工/20180926有哪些我们觉得荒谬的事，却有着合理的经济学解释？/">有哪些我们觉得荒谬的事，却有着合理的经济学解释？</a>
+            <span class="archive-item-date">2018/09/26</span>
+        </article>
+    
+        
+
+        
+
+        <article class="archive-item">
+            <a class="archive-item-link" href="/2018/09/25/觉得好就收录了/20180925争吵的本质/">争吵的本质</a>
+            <span class="archive-item-date">2018/09/25</span>
+        </article>
+    
+    
+    <nav class="pagination">
+        <a class="page-number" href="/archives/">1</a><span class="page-number current">2</span><a class="page-number" href="/archives/page/3/">3</a><a class="page-number" href="/archives/page/4/">4</a>
+    </nav>
+
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

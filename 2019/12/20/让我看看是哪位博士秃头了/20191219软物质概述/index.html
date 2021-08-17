@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>软物质概述 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">软物质概述</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2019/12/20&nbsp;&nbsp;21:31</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/让我看看是哪位博士头秃了/">让我看看是哪位博士头秃了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>在谈“什么是软物质”前，我们有必要回顾一下物质的形态。一般情况下，物质有三态，分别为气态、液态和固态。人们熟知的水的三态分别是水蒸气、液态水和冰。</p>
+<p>这三类物态可以互相转化，称之为物质的相变——固态可以通过升华成为气态（这里固态指晶体的固态，它的微观结构是有序排列的），反之为凝华；固体可以融化为液体，反之为凝固；气体可以液化为液体，反之则为气化。</p>
+<p>以上只是关于相变最基础的内容，事实上，真实世界中的物质不只有三态。生活中最常见的玻璃，就很难说它是固体还是液体。虽然玻璃看起来是固态，但它的原子尺度上的排布是“远程无序”的，类似结构的还有沥青、松香等，它们表现出更像液态。在欧洲一些古老的教堂中，玻璃下半部分比上半部分更厚，部分学者认为“玻璃在重力作用下缓慢地向下流动，就像水一样往下流，使得其下半部分相对厚一些”。</p>
+<p>对于这种些神奇的物质，科学家给它们定义了新的形态——玻璃态。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/%E7%8E%BB%E7%92%83%E5%8C%96%E8%BD%AC%E5%8F%98.jpg" alt="玻璃化转变"></p>
+<center>玻璃化转变</center>
+<p>玻璃是如何制造的呢？当物质加热到液态时迅速冷却就形成了玻璃（科学证明，几乎所有的物质都具有这一性质）。从原理上看，液态物质在快速加压或快速降温时，会避开结晶进入过冷态，形成了不稳定的过冷液体（可以简单地理解为温度低于凝固点，但没变成固体），也就是说，本来应该变为固体的物质却没成为固体。当过冷度（实际结晶温度比理论结晶温度低，两者差值为过冷度）继续增加时，体系的粘度不断飙升，这一过程称之为玻璃化转变。当体系变得过于黏稠而失去流动性就形成了非晶态的固体，也就是玻璃。</p>
+<h3 id="小玻璃-大问题">小玻璃，大问题</h3>
+<p>小小的玻璃与人类文明的进步和繁荣紧密相连。5000年前，古巴比伦人制造出来了世界上第一块人造玻璃，古希腊人用“流动、熔融的石头”来描述玻璃；我国在1000年前制造出了无色半透明的的“琉璃”。</p>
+<p>但是，我国的玻璃技术发展相当缓慢，今天我们很难在博物馆里看到精美的玻璃。有些研究科学史的学者就在回答“李约瑟问题”（为什么近代科学没有在我国诞生）时提出，我国古代钢铁冶炼技术、陶瓷加工技术过于繁荣，玻璃技术较为落后，而玻璃是诞生近代科学的最有力工具——借助玻璃独特的光学特性，人类发明了能观测星空的望远镜，由此发现了万有引力定律；还发明了能观察细胞的显微镜，逐渐演变出现代分子生物学，为近代科学发展和人类了解物质世界起了至关重要的作用。</p>
+<p>玻璃的结构本身带来的科学问题，也促使着科学家了解物质结构与性质而努力。玻璃是一种非晶物质，而关于这类物质的研究具有极高的科学价值。到目前为止已有四位科学家因非晶相关工作获得了诺贝尔奖，例如非晶态聚合物本体无规线团模型的提出（1974化学奖），非晶电子定域特性的发现（1977物理奖），还有我们现在生活必不可少的光纤——华裔物理学家高锟发明了高纯度玻璃光纤而获得了2008年诺贝尔物理学奖。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/%E5%9B%9B%E4%BD%8D%E7%A7%91%E5%AD%A6%E5%AE%B6%E5%9B%A0%E9%9D%9E%E6%99%B6%E7%9B%B8%E5%85%B3%E5%B7%A5%E4%BD%9C%E8%8E%B7%E5%BE%97%E8%AF%BA%E8%B4%9D%E5%B0%94%E5%A5%96%EF%BC%8C%E4%BB%8E%E5%B7%A6%E8%87%B3%E5%8F%B3%E5%88%86%E5%88%AB%E6%98%AFP.J.Flory%EF%BC%881974%EF%BC%89%EF%BC%8CP.W.Anderson%E3%80%81N.F.Mott%EF%BC%881977%EF%BC%89%EF%BC%8C%E9%AB%98%E9%94%9F%EF%BC%882009%EF%BC%89.jpg" alt="四位科学家因非晶相关工作获得诺贝尔奖"></p>
+<center>四位科学家因非晶相关工作获得诺贝尔奖</center>
+<center>
+<p>从左至右分别是<a href="https://www.nobelprize.org/prizes/chemistry/1974/press-release/" target="_blank" rel="noopener">P.J.Flory</a>（1974），<a href="https://www.nobelprize.org/prizes/physics/1977/press-release/" target="_blank" rel="noopener">P.W.Anderson、N.F.Mott</a>（1977），<a href="https://www.nobelprize.org/prizes/physics/2009/press-release/" target="_blank" rel="noopener">高锟</a>（2009）</p></center><p></p>
+<p>了解玻璃态的本质也一直也是凝聚态物理及软物质领域的重要研究内容。2005年，国际顶级期刊Science在其创刊125周年专辑中，提出了21世纪科学研究面临的125个重大科学问题。其中第22个便是“玻璃态的本质是什么”？如今十多年过去了，该领域仍未有大的突破。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/Science%E5%88%9B%E5%88%8A125%E5%91%A8%E5%B9%B4%E6%97%B6%E6%8F%90%E5%87%BA%E4%BA%86125%E4%B8%AA%E9%87%8D%E5%A4%A7%E7%A7%91%E5%AD%A6%E9%97%AE%E9%A2%98.jpg" alt="Science创刊125周年时提出了125个重大科学问题"></p>
+<center>
+<p><a href="http://www.nsfc.gov.cn/csc/20340/20289/22023/index.html" target="_blank" rel="noopener">Science创刊125周年时提出了125个重大科学问题</a></p>
+</center>
+<p>正因我们不了解玻璃态的本质，在处理相变问题时很多不可控的因素就出现了。比如1986年“挑战者”号航天飞机在它第10次任务时，升空72秒就发生爆炸，7名宇航员全部丧生。最后调查发现，是因为发射时气温过低，寒冷的天气使火箭内的垫圈发生了玻璃化转变，导致火箭内部的可燃气体泄露，最终酿成了悲剧。</p>
+<h3 id="软物质兼具固体和液体的性质">软物质兼具固体和液体的性质</h3>
+<p>与玻璃类似，处于固体和理想流体之间的物质就是软物质。软物质通常由大分子组成，包括液晶、聚合物、胶体、膜、泡沫、颗粒物质、生命物质（如DNA、RNA、蛋白质）等。在自然界、生命体、日常生活和生产加工中广泛存在。橡胶、胶水、墨汁、洗涤剂、涂料、化妆品、食品等都属于软物质。</p>
+<p>软物质的研究历史其实很短，但人们接触它的历程很久远。人类很早就接触到了天然橡胶这种典型的软物质。在19世纪，已经有大量的软物质被发现，科学家想要一种理论描述这类物质的性质。1928年，宾汉（Eugene C. Bingham）提出了流变学（Rheology），可是科学家很快发现这类物质很难用单一的理论来解释“复杂流体”。与此同时，使用软物质的材料作为技术应用越来越多——很长时间以来，科学家都不了解这些软物质背后的共性。</p>
+<p>到了20世纪80年代末，科学家才认识到软物质是一类具有特殊运动规律的物质形态，将其作为一类普遍的物质形态来研究。这一觉醒要归功于物理学家德让纳（Pierre-Gilles de Gennes），他因发现研究简单系统中有序现象的方法可以被推广到比较复杂的物质形式，特别是推广到液晶和聚合物的研究中而获得了1991年的诺贝尔奖物理学奖。他在当年的诺奖颁奖典礼上发表以“软物质”为主题的演讲，正式介绍了“软物质”这一术语，很快就得到了学界的普遍认可——一门古老的新学科出现了。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/P.G.de%20Gennes.jpg" alt="P.G.de Gennes"></p>
+<center>
+<p><a href="https://www.nobelprize.org/prizes/physics/1991/press-release/" target="_blank" rel="noopener">Pierre-Gilles de Gennes</a></p>
+</center>
+<h3 id="时空尺度上的软物质">时空尺度上的软物质</h3>
+<p>软物质的基本特性包括：对外界微小作用非常敏感，其响应通常是非线性的、且普遍存在自组织行为等。因此，其结构与宏观性能与普通固体、液体和气体大不相同。为什么软物质会让科学家如此与众不同呢？我们可以从能量和时空尺度的角度来看软物质的形成过程。</p>
+<p>自然界的普遍规律是系统的能量越低就越稳定。原子核外电子的排布也遵循这一规律，多电子原子在基态时，核外电子总是尽可能地先占据能量最低的轨道。平常所用的乙烯塑料(CH2)n，碳原子外层4个电子，可以连接一个碳原子和两个氢原子，形成8个电子的稳定结构，还能形成一个稳定的长链——聚乙烯。但对于这些高分子来说，在不同的空间尺度上看它会展现出截然不同的力学特性。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/%E8%81%9A%E4%B9%99%E7%83%AF%E5%88%86%E5%AD%90%E6%A8%A1%E5%9E%8B.jpg" alt="聚乙烯分子模型"></p>
+<center>聚乙烯分子模型</center>
+<p>如果在一个相对较大的纳米尺度来看，聚乙烯长链其实是一个完全无规则的线团。它们的表现的就像弹簧一样；如果用力把分子拉开，这条分子链会因为熵作用而回缩。</p>
+<p>科学家发现，在空间结构上，分子链行走距离的平方的平均值和行走的步数成正比。而在时间上，如果没有任何限制，一条高分子链响应时间和链长度的平方成正比。如果有其他分子链的干扰（熔体），它的响应时间和长度的立方成正比。</p>
+<p>什么是响应时间？就是物质从一个状态转变为下一个状态的时间。在日常生活中，以最常见的物质来说，水、空气的组成分子都是小分子（几个原子组成），它们的响应时间假设为1皮秒（10^-12秒），我们自然无法感知它的响应。我们看到的物态相对就是固定的，是液体或者气体，看不到处于这两者之间的状态。但对于软物质（高分子）来说，由于成幂指数的关系，它的响应时间可以很慢，以至到人能感知到转变的中间过程。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/LeanCloud/%E8%BD%AF%E7%89%A9%E8%B4%A8%E7%9A%84%E5%BA%94%E5%8A%9B-%E5%BA%94%E5%8F%98%E6%9B%B2%E7%BA%BF%E9%9D%9E%E5%8D%95%E8%B0%83%E5%8F%98%E5%8C%96.jpg" alt="软物质的应力-应变曲线非单调变化"></p>
+<center>软物质的应力-应变曲线非单调变化</center>
+<p>另一方面，软物质的应力-应变曲线也兼具固态、液体的性质。对于理想固体来说，如果对它进行应变（形变），它的应力和应变之间就是简单的线性关系。例如，从中学物理学过的胡克定律可知，弹簧的弹力和伸长量成正比。</p>
+<p>对水、酒精等流体，它们的应力应变反映出其黏滞性。流体运动时，液体内部不同位置的运动速度不同，会表现出阻力的作用，给我们的感受就是这种液体“黏稠”。对牛顿流体（理想流体）来说，它的粘滞系数是一个常数，流体截面受到的力（剪切应力）和剪切应变速率成正比——力越大，流动得越快。</p>
+<p>然而，对于软物质（比如熔融状态下的塑料，属于高分子熔体），它们不满足这样的简单关系，黏滞系数非单调变化。有可能用的力越大，液体的粘度越大或越小。原因在于，一是软物质材料中高分子链的连接性（化学共价键让它们连在一起）；二是高分子链之间还有缠结效应（不可相互穿越性）。</p>
+<p>一般来说，响应时间非常短的情况下，物质的黏度就会非常大，相当于弹性固体。我们平时生活中常见的软物质食物，如蛋清、果冻等，如果在特别短的时间尺度内“响应”，它们就很黏稠甚至坚硬，表现出固体的性质。</p>
+<p>即使是水，对于跳水运动员来说，如果从很高的地方跳入水中——入水时间极短，水对人的压力非常大，原因是水此时会表现出固体的性质。如果以很慢的时间尺度去感受，它们跟普通液体没有什么区别，相当于粘性流体。</p>
+<h3 id="软物质的应用">软物质的应用</h3>
+<p>由于人类能感知的时间尺度约为0.1秒，恰好在一个中间的时间尺度，因此我们能看到软物质非常之多的神奇性质。而这些性质中或许就藏着改变世界的秘密，等待着我们发现。</p>
+<p>软物质的奇异特性，最广为认知的例子就是“非牛顿流体”。近年来，非牛顿流体是各种综艺节目的常客，“口香糖开椰子”，“水上漂”之类的表演，正是利用了这类流体的特性。我们能轻松制作非牛顿流体，只需要用玉米淀粉和水以2：1的比例混合，就能得到一种非牛顿流体。</p>
+<p>但需要注意的，尽管非牛顿流体和软物质具有相似的性质，但两者并不等同。因为前者是力学上的定义——剪应力与剪切应变率之间不满足线性关系的流体，也就是前文所说黏度不为常数的物质，而后者的范围更广泛。</p>
+<p>非牛顿流体的最大特点就是它“吃软不吃硬”。如果用很高的速度去撞击它，会遇到非常大的阻力，甚至子弹都不能击穿。但换用温柔的触目，就能轻松改变的形态。非牛顿流体的这一性质，和和时空尺度上来看软物质是同样的道理——在很短时间内它变得非常坚固，而长时间的情况它表现非常“柔软”。</p>
+<p>软物质在当代科技中也有重要的应用，这里分享两个例子。</p>
+<ul>
+<li>第一个是解决金属和塑料的结合的问题。<br>
+若想结合两种材料，最朴素的办法就是用胶水将两者粘在一起。但是由于金属和塑料的膨胀系数不同，在冷热变化时混合材料就很容易开裂。手机充电时，其温度会比平时使用温度高，这时如果手机内的金属和塑料不牢固，机器就会出现问题。<br>
+为了解决开裂的问题，科学家从树根得到了启发——树系完全长在土里，能否让塑料也长在金属中？由此科学家在金属表面进行纳米蚀刻，再把软物质形态的塑料灌进去，这样高分子的塑料和金属就完全“生长”在了一起。<br>
+利用同样的办法还实现了金属与陶瓷、复合材料等物质之间的结合。这就是纳米注塑成型技术（NMT），一种将金属和塑料以纳米技术相结合的工艺，最初由日本大成（Taiseiplas）株式会社于2002年发明，目前以广泛运用于手机制造行业。一项数据显示，2015年国产手机中有40%的外壳采用了该技术。但是，这种技术只对部分高分子材料才有效，控制熔融状态下的材料尺寸也很困难，涉及到相当多关于软物质的问题。</li>
+</ul>
+<ul>
+<li>第二个例子是飞机轮胎。<br>
+目前我国民航使用的飞机轮胎90%以上都是从国外租借来的，我们在制造民用飞机相对落后的原因之一就反映在飞机轮胎的橡胶材料上。由于我们对软物质以及软物质/纳米粒子共混材料的控制研究不足导致一系列的技术落后。而相关技术始终被国外一些企业控制和封锁。飞机飞行两个月，就需要更换一次胎面胶，大概更换2-4次他们会把轮胎拿走直接换新。<br>
+飞机轮胎对于飞机起降的安全至关重要，要求极高的抗冲击性能，同时还不能因为摩擦产生过高的热量导致材料变形，因此相关技术也堪称“黑科技”。从微观上看，材料内是高分子添加了一些纳米粒子，形成了多种不同的网络结构。对于这样的微观软物质体系的调控，是国际性难题，也亟需我们这一代和未来的有识之士投身，最终解决这个重大前沿科学问题。</li>
+</ul>
+<h3 id="ref">Ref:</h3>
+<ol>
+<li><a href="https://mp.weixin.qq.com/s?__biz=MzA5NjUyNjc5Ng==&amp;mid=2651399762&amp;idx=7&amp;sn=935a609a1a9f5e77fdc6c7be601f6ec0&amp;chksm=8b534ef1bc24c7e7bfc74bc6ed919874d9ce0263c9da26c6061c7a065838a66ffc723d02333a&amp;scene=0&amp;xtrack=1&amp;key=11e9ee3c40a08579616d5f3b57dc7f147d212a410c359d610c94883bfa76b05be85ab713723d0d9a9eb6228df56e72ba910d4d14b52a913772189f7a9febe539b4abe9a798ac14368d9e336f9075009f&amp;ascene=14&amp;uin=MTQ0MDEyODcyMQ%3D%3D&amp;devicetype=Windows+10&amp;version=62060841&amp;lang=zh_CN&amp;exportkey=AbAfgoNhf2VEGmhqlYenS3o%3D&amp;pass_ticket=yqWOjtTGk5lSzdIR5Jyr6Azw%2BxoAck1hYJWfXs4EwIra9ImxDHeLvp4O8GJ0MrvF" target="_blank" rel="noopener">软物质是什么，能吃吗？</a></li>
+</ol>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/Ph-D/"># Ph.D.</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2019/12/21/随笔/20191221音乐分类(待编辑)/">音乐分类</a>
+            
+            
+            <a class="next" rel="next" href="/2019/12/20/觉得好就收录了/20191220《一无所有》歌词/">《一無所有》</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

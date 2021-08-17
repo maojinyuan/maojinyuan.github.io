@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>“长寿药”的曙光：首次获准开始临床试验【转】 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">“长寿药”的曙光：首次获准开始临床试验【转】</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/09/04&nbsp;&nbsp;8:56</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>编者按：许多食材、古方和保健品在一些传说和研究中都被认为具有延缓衰老，保持青春的作用，但目前没有确切的临床证据证明它们在延缓衰老上的有效性和安全性。就在去年，美国食品药品监督管理局首次批准了一款抗衰老药物的临床试验。如果试验成功，这将是第一次在临床试验中证明一种特定的药物可以延缓多种衰老相关疾病。</p>
+<p>古往今来，人们追寻长寿的脚步从未停歇。</p>
+<p>两千多年前，秦始皇派遣方士徐福带着千名童男童女出海探访“仙山”，寻找长寿灵药，但他最终没有等到他们回来。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/1.jpg" alt="浮世绘"><br>
+<strong><center>►浮世绘：徐福渡海帆船求“长寿仙药”，图片作者：Utagawa Kuniyoshi</center></strong></p>
+<p>四百多年前，江户时期的日本人根据吃人鱼可以长寿的传说，制成神奇的“人鱼骨粉”药丸，但这并没有为人们带来长寿。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/%E6%97%A5%E6%9C%AC%E2%80%9C%E5%85%AB%E7%99%BE%E6%AF%94%E4%B8%98%E5%B0%BC%E2%80%9D%E7%9A%84%E4%BC%A0%E8%AF%B4.jpg" alt="日本“八百比丘尼”的传说"><br>
+<strong><center>►日本“八百比丘尼”的传说，据传吃下人鱼可以活到了800岁；图片来源：早稻田大学戏剧博物馆馆藏</center></strong></p>
+<p>大约一百年前，斯大林期待博戈莫列茨院士研究出长寿秘方，对他百般支持。但博戈莫列茨院士于65岁去世，斯大林只能苦笑：“这家伙把大家都骗了”。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/%E5%8D%9A%E6%88%88%E8%8E%AB%E5%88%97%E8%8C%A8%E9%99%A2%E5%A3%AB%E5%92%8C%E5%84%BF%E5%AD%90.jpg" alt="博戈莫列茨院士和儿子"><br>
+<strong><center>►博戈莫列茨院士和儿子，摄于20世纪30年代。来源：Wikiwand</center></strong></p>
+<p>随着许多与衰老相关的生物途径被阐明，研究人员发现了各种潜在的抗衰老物质，包括热量限制模拟物，如白藜芦醇、雷帕霉素和二甲双胍；抗氧化物，如维生素A、C、E、槲皮素、褪黑素、辅酶Q10和木瓜酵素；自噬诱体，如亚精胺；植物化学物质，如姜黄素、金雀异黄酮和儿茶素；细胞再生促进剂等。表观遗传学研究还发现，DNA甲基化、组蛋白修饰和小RNA（mRNA）的调节，都会在衰老及其相关疾病中起作用，因此针对DNA甲基化和组蛋白乙酰化的抑制剂也可能成为潜在的“长寿药”。</p>
+<p>尽管在一些传说和研究中，许多食材、古方和保健品都被认为具有延缓衰老，保持青春的作用，但目前没有确切的临床证据证明它们在延缓衰老上的有效性和安全性。就在去年，美国食品药品监督管理局（FDA）首次批准了一款抗衰老药物的临床试验。如果试验成功，这将是第一次在临床试验中证明一种特定的药物可以延缓多种衰老相关疾病。</p>
+<p>首款进入临床实验的“长寿药”</p>
+<p>美国FDA是国际医疗审核的权威机构，美国的处方和非处方药物都必须在此机构通过安全性和有效性的评估方可上市。2015年年底，FDA批准了一款治疗衰老的药物，2016年开始进行临床试验。这款全球首例进入临床试验的抗衰老药物是一种糖尿病药物——二甲双胍（商品名格华止）。临床试验将为期5-7年，试验对象是3000例70-80岁之间的志愿者，主要目的是测试二甲双胍在未患糖尿病的健康人群中对年老相关疾病，如认知退化、心血管疾病和癌症的延缓作用。</p>
+<p>早在中世纪，欧洲和中国的医生就发现山羊豆对某些排尿过多的患者有很好的疗效。实际上，真正的起作用的是山羊豆中的胍类物质。19世纪，化学家从山羊豆中分离出了胍，并对其进行了化学修饰，开发了包括二甲双胍在内的低毒性版本。20世纪50年代，法国医生和药理学家让·斯特恩（Jean Sterne）开始进行双胍类药物在II型糖尿病中的临床试验，并发现二甲双胍的疗效最好。随后，二甲双胍相继在各国批准上市，并成为了全球销量最高的糖尿病药物。现在，全球每年要生产3.7万吨二甲双胍。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/%E5%B1%B1%E7%BE%8A%E8%B1%86%E5%BD%A2%E6%80%81%E5%92%8C%E8%A7%A3%E5%89%96%E5%9B%BE.jpg" alt="山羊豆形态和解剖图"><br>
+<strong><center>►图：山羊豆形态和解剖图。来源：Prof. Dr. Otto Wilhelm Thomé，书籍： Flora von Deutschland, Österreich und der Schweiz， 时间：1885</center></strong></p>
+<p>随着二甲双胍的广泛应用，人们发现它除了能治疗糖尿病，还可以减缓其他与年龄相关症状的发生，比如心脏病和中风等心血管疾病。理论研究表明，二甲双胍会参与一些衰老机制，比如生长调控、炎症反应等代谢通路。尽管二甲双胍的直接靶点还不清楚，但它可以间接激活腺苷酸活化蛋白激酶（AMPK），从而来调节生物体的能量平衡以及葡萄糖和脂肪的代谢。此外AMPK的激活还能抑制mTOR激酶，从而控制细胞分裂和肿瘤发生。过去数十年的临床试验、流行病学分析和大数据研究都表明，二甲双胍对各种衰老相关疾病有预防作用，而服用二甲双胍的糖尿病人的平均寿命也比健康的对照组更长。</p>
+<p>除了在多种实验中表现出的抗衰老效果，二甲双胍击败其他抗衰老的化合物，成为首款抗衰老临床试验药物的另一个优势是它较高的安全性。临床实验的发起者，美国纽约州阿尔伯特·爱因斯坦医学院（Albert Einstein College of Medicine）衰老研究所所长尼尔·巴尔齐莱（Nir Barzilai）教授对二甲双胍非常熟悉，不仅作为医生和研究者，更作为一个已经服用此药五年的病人。巴尔齐莱教授被诊断为糖尿病初期，他认为该药非常安全，轻微的副作用也仅限于肠胃不适。在这个里程碑式的实验中，实验药物的安全性具有重要的战略地位，因此二甲双胍是一个不错的选择。</p>
+<p>唯一已知有效延长哺乳动物最大寿限的药物</p>
+<p>事实上，除了二甲双胍，还有许多化合物在分子机制和模式生物实验中都体现出了抗衰老的潜力。</p>
+<p>雷帕霉素（Rapamycin, RPM）就是二甲双胍的一个极具潜力的竞争对手。这种天然化合物是20世纪80年代在复活节岛上的土壤中发现的吸水链霉菌（Streptomyces hygroscopicus）的分泌物，其身世本身就极具神秘色彩。最初，这种化合物因为具有良好的抗真菌性能而被用于治疗皮肤病。此后，雷帕霉素的发现者，加拿大学者苏伦・塞加尔（Suren Sehgal）又发现了雷帕霉素的免疫抑制功能。因此，1999年，美国FDA批准雷帕霉素作为免疫抑制剂用于器官移植患者的抗排异。</p>
+<p>更具传奇色彩的是，塞加尔用自己的生命为雷帕霉素可能的抗癌和抗衰老作用做出了预言。1998年，塞加尔被诊断出癌症，当时雷帕霉素尚未获准任何用途，但他却坚信它能抵御癌症。当时塞加尔的癌症已经转移，医生预言他的生命只剩下两年时间。然而，在服用雷帕霉素之后，塞加尔的癌症竟奇迹般的停止恶化了。2003年，塞加尔决定停止服用雷帕霉素，希望以此验证阻止他癌症发展的是否真的是雷帕霉素。几个月后，塞加尔就去世了。临终前，他说自己所做的最愚蠢的事就是停止服用雷帕霉素。</p>
+<p>在此之后，科学家们对雷帕霉素进行了深入的研究。大量的实验表明，目前所有测试过的模式生物，包括酵母、果蝇、线虫和小鼠中，雷帕霉素都能有效地延长寿命。更激动人心的是，在小鼠中的多项实验表明，雷帕霉素延长的是小鼠的最大寿限（群体中最长寿的10%个体的平均寿命）而非平均寿限（群体中所有个体的平均寿命）。这对于抗衰老的意义更为巨大，因为延长平均寿限可以通过减少过早死亡来达成，而延长最大寿限才是真正意义上的延缓衰老。目前，雷帕霉素是唯一已知可以真正有效延长哺乳动物最大寿限的药物。此外，雷帕霉素在治疗癌症、防止心脏病，甚至延缓老年痴呆症中均有可喜的研究成果。雷帕霉素之所以可以延缓衰老，主要是由于它可以抑制细胞内的TOR激酶并启动自噬，造成类似限制热量摄入的效果。</p>
+<p>尽管有着令人兴奋的杰出表现，但是雷帕霉素还不能成为人类完美的抗衰老药物，因为它的副作用实在不容小觑。首先，其潜在的免疫抑制功效会给人体带来一系列的负面效应。其次，长期使用雷帕霉素的病人已经出现了许多严重的副作用，比如伤口愈合障碍、贫血、蛋白尿、肺炎、高脂血症和增加糖尿病风险。</p>
+<p>红酒中的白芦藜醇：似乎只对“胖子”起作用？</p>
+<p>相比雷帕霉素，另一个天然的潜在抗衰老的化合物则更加温和而美妙。很多人认为，爱吃甜食的法国人是因为常喝红酒才很少患上心血管疾病，而其中的功臣就是白芦藜醇——一种存在于葡萄和红酒中的多酚类物质。早在1998年，美国著名营养保健专家艾尔・敏德尔（Earl Mindell）博士就在他出版的《抗衰老圣典》中将白芦藜醇列为100种最有效的抗衰老物质之一。2003年，宾夕法尼亚州BIOMOL研究实验室的Howitz等人在酵母中发现白芦藜醇有延长寿命的潜力。有趣的是，白芦藜醇似乎只对“胖子”起作用。2006年Baur等人发现，白芦藜醇可以显著延长高脂饮食小鼠的寿命，但对正常饮食的小鼠却几乎没有作用。一系列研究表明，白芦藜醇可以模拟热量限制造成的生理反应。此外，白芦藜醇还能与细胞中应激相关靶点进行直接或者间接的相互作用，比如Sir2样蛋白。许多研究表明，高水平的Sir2样蛋白在酵母、果蝇、线虫和小鼠中均可起到防止衰老相关疾病和延长寿命的功能。</p>
+<p>尽管这些化合物都还没有进行抗衰老的人体临床试验，但是在模式生物中，许多潜在的抗衰老化合物确实显著延长了这些动物的寿命（表）。</p>
+<p><img src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/%E7%9B%AE%E5%89%8D%E5%9C%A8%E6%A8%A1%E5%BC%8F%E7%94%9F%E7%89%A9%E4%B8%AD%E6%9C%89%E6%95%88%E5%BB%B6%E9%95%BF%E5%AF%BF%E5%91%BD%E7%9A%84%E5%8C%96%E5%90%88%E7%89%A9%EF%BC%8C%E7%99%BE%E5%88%86%E6%AF%94%E8%A1%A8%E7%A4%BA%E5%AF%BF%E5%91%BD%E7%9A%84%E5%BB%B6%E9%95%BF.jpg" alt="目前在模式生物中有效延长寿命的化合物"><br>
+<strong><center>►表：目前在模式生物中有效延长寿命的化合物，百分比表示寿命的延长。来源：Trends in Pharmacological Sciences，2016</center></strong></p>
+<p>绕开监管的基因治疗实验</p>
+<p>除了首款进入临床试验的二甲双胍，其他一些临床试验也试图绕过相关法律的监管。美国西雅图生物技术公司BioViva的女掌门伊丽莎白·帕里什（Elizabeth Parrish）从2015年9月开始在自己身上进行基因治疗试验，她向体内注射了携带端粒酶基因的病毒，并向肌肉注射了增加肌肉的卵泡抑素基因。在闭关7个月后，今年4月22日，她对外宣布45岁的自己身体水平已经回到了20岁水平。这个实验引起了学术界和业界的巨大争议，结果也还有待考察。由于基因疗法在美国属于非法行为，为了规避有关部门的监管，实验是在美国境外完成的，具体地点也未对外披露。</p>
+<p>随着人类寿命的延长，人类社会面临着老龄化的趋势，与之相关的老年病问题也日趋严重。二甲双胍在美国被允许开始临床试验，表明抗衰老药物的研制开始走上正轨，这也为今后更多的临床试验提供了可能。不知道人类千百年来寻找“长寿药”的征程，在我们的有生之年是否可以有个结果了？</p>
+<p><strong>Ref：</strong></p>
+<p>1.S. S. Hall, A Trial for the ages. Science 349, 1274-1278 (2015); published online EpubSep 18 (10.1126/science.349.6254.1274).</p>
+<p>2.A. A. Moskalev, A. M. Aliper, Z. Smit-McBride, A. Buzdin, A. Zhavoronkov, Genetics and epigenetics of aging and longevity. Cell cycle 13, 1063-1077 (2014)10.4161/cc.28433).</p>
+<p>3.A. M. Vaiserman, F. Marotta, Longevity-Promoting Pharmaceuticals: Is it a Time for Implementation? Trends in pharmacological sciences 37, 331-333 (2016); published online EpubMay (10.1016/j.tips.2016.02.003).</p>
+<p>4.D. P. Goldman, D. Cutler, J. W. Rowe, P. C. Michaud, J. Sullivan, D. Peneva, S. J. Olshansky, Substantial health and economic returns from delayed aging may warrant a new focus for medical research. Health affairs 32, 1698-1705 (2013); published online EpubOct (10.1377/hlthaff.2013.0052).</p>
+<p>5.A. Zhavoronkov, A. Moskalev, Editorial: Should We Treat Aging as a Disease? Academic, Pharmaceutical, Healthcare Policy, and Pension Fund Perspectives. Frontiers in genetics 7, 17 (2016)10.3389/fgene.2016.00017).</p>
+<p>6.First gene therapy successful against human aging, BioViva USA Inc, First gene therapy successful against human aging</p>
+<p>7.Assessment of fracture risk and its application to screening for postmenopausal osteoporosis. Report of a WHO Study Group. Tech. Rep. Ser. 843, 1–129 (1994).</p>
+<p>作者：饶毅<br>
+链接：<a href="https://zhuanlan.zhihu.com/p/22235559" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/22235559</a><br>
+来源：知乎<br>
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/09/09/随笔/20160909分享的力量/">分享的力量</a>
+            
+            
+            <a class="next" rel="next" href="/2016/09/04/知识搬运工/20160904再叙人工智能奇点/">再叙人工智能奇点【转】</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

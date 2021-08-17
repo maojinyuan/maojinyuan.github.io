@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>有哪些环保骗局？ | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">有哪些环保骗局？</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/12/18&nbsp;&nbsp;0:33</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h3 id="center-一次性筷子就是一个骗局-center"><center>一次性筷子就是一个骗局！</center></h3>
+<p>“一株生长了20年的大树，仅能制成6000—8000双筷子。”关于一次性筷子种种耸人听闻的说法如今似乎已经渐成“共识”，大有“人人喊打”之势。目前正值各地纷纷召开“两会”，已有北京、浙江、河南等地的政协委员再次提出“禁用一次性筷子”的意见。如果不出意外，还将有更多的代表、委员把类似的建议提交到各地甚至全国的“两会”上去。</p>
+<p>但是，这是一个彻头彻尾的谎言。</p>
+<p>伴随着隆隆的电锯声，一株株的参天大树轰然倒地，一双双的一次性筷子送上餐桌……笔者屡屡在从央视到各地媒体上看到这类“公益广告”，也曾对“使用一次性筷子就等于破坏森林”的宣传深信不疑，直到后来有机会接触过业内人士，才惊觉被忽悠了好多年。</p>
+<p>事实上，根本不会有哪个厂家会奢侈到用一棵棵价值不菲的森林原木来制造区区“6000— 8000双”价格低廉的一次性筷子。那些质地坚实、油脂丰富的优良木材也根本不适合制造一次性筷子。有人要问了，那制造这些一次性筷子所耗用的木材总不会是人为“变”出来的吧？恭喜你，答对了！一次性筷子的主要原料正是来自于人工种植的速生杨、桦树等质地疏松、油脂较少的经济林木和其它边角废木料，还有部分则用竹子制造。可见，使用一次性筷子不仅不会 “破坏森林”，而且将拉动速生杨等经济林木的种植规模。</p>
+<p>速生杨等经济林木因成材快、效益高，曾是农民赖以发家的重要“法宝”，而如今，由于“反一次性筷子”的种种流言渐成气候，以及造纸行业收缩产能等因素，速生杨的市场价格惨遭“腰斩”，千万树农损失惨重，其中相当多数树农将被迫不再育苗。</p>
+<p>“环保人士”们还常用一种带有民族主义色彩的说法来渲染他们的诉求，即所谓的森林覆盖率远高于中国的日本、韩国等国自己不生产一次性筷子，而要从中国进口（欧、美国家中很少使用筷子，自然谈不上生产一次性筷子的问题），从而给一次性筷子产业加上了一层妖魔化的色彩。事实上，真正的原因很简单，正是因为日本的农业用地有限，农产品的价格很高，当然没有条件去大量种植速生杨等林木，所以才不得不从中国进口一次性筷子。中国出口这种产品，和出口大蒜、水果等其它农副产品并没有什么区别，根本不涉及到“损中利日”的问题。</p>
+<p>至于生产一次性筷子的过程中要消耗一定的水和能源等说法，纯属废话。难道清洗、消毒非一次筷子或使用那些“卫生餐具”就不要消耗水和能源吗？到底是集中的大量熏蒸还是逐次清洗更节水、节能？保存不当或过期的一次性筷子虽有可能染上病菌，难道非一次性的筷子感染病菌甚至肝炎病毒的可能性会更小？</p>
+<p>事实上，一次性筷子不仅大大方便了广大就餐者，减少感染各种病菌和肝炎病毒的危险，减少反复清洗、消毒筷子所耗费的水、电和清洁剂、消毒剂等，而且在上游拉动了速生杨等经济林木的种植规模，在下游其使用后的废品则是优良的造纸原料。只要善加管理，就完全可以发展成为真正意义上的绿色环保产业。</p>
+<p>当然，一次性筷子也有其缺点：一是漂白和消毒上的管理不善，可能会对环境造成一定的污染，并可能对使用者的健康造成危害；二是回收利用缺乏规范，以致大量的废品没有得到充分利用且增加了垃圾量。这些问题都应当呼吁政府加强管理，但是简单的“禁用”不仅将摧毁整个产业，殃及千千万万的树农和工人，给用餐者造成不便，而且在破坏速生杨等经济林木产量的同时，如果市场对其它非一次性的木筷、铁筷等的需求上升，反而会导致对森林资源和其它资源的真正破坏和浪费。</p>
+<p>在“禁筷”问题上最积极的“绿色和平”等组织的宣传手法是很可疑的——如果说包括我自己在内的普通大众不了解一次性筷子真正由来实属正常，难道这些“专业人士”竟不曾深入企业和田间去调查一下吗？完全有理由质疑，这些所谓的“环保组织”其实很清楚一次性筷子根本无害于原生的森林，但仍然用“拯救森林筷行动”等口号来愚弄公众、欺世盗名！他们发动学生、利用媒体，对使用一次性筷子的餐饮场所打上标签，进行丑化宣传，从而威逼社会“禁筷”来实现自己“不证自明”的诉求。这种传教式的宣传手段其实正是反智、反公益的流毒。</p>
+<p>最后再说一下真正对森林资源造成极大破坏的产业——高档实木地板、实木家具等奢侈品，以及高档社区中移植的那些古树原木。且不说地板和家具商们号称的“巴西进口”的木材中有很多其实正来自中国的山林，这些真正砍伐原木作为材料的高档商品竞相以“环保”为宣传口号，而社会公众以及“绿色和平”等组织对之无动于衷，却对并非使用原木的一次性筷子肆意妖魔化！</p>
+<p>剖析这种现象，一方面是由于前者的利益集团太过强势，尤其和媒体的关系深厚，而后者所伤害的只是那些无力自辩且没有代言人的“沉默”树农和打不起广告的小企业、小生意人；另一方面则是因为反对实木地板和实木家具会真正触及到相当多数“社会精英”的高档消费享受，虽然明知其害也不敢触犯“贵人”的“众怒”，而后者不过举手之劳即可彰显所谓的“环保精神”，所以虽然明知其谬也要用谣言去“传教”。对于这号“环保组织”的宣传口号，大家最好还是要保留点质疑，以免人云亦云，落得自欺欺人，祸国殃民。</p>
+<p>补充资料： 2006年北京林业大学论文：浅析我国对日本大量出口木制一次性筷子问题<br>
+———————————————————————————————————————————<br>
+使用的都是速生木头，种植速生杨树可以提高经济，还可以解决环境污染，速生杨树可以制作家庭里面的三夹板，装修的材料，还可以提高绿化，吸收路边过多的灰尘，省道国道边上的杨树就是速生杨树！</p>
+<p>后面说一下自己的见解和查询相关资料所查到的结果！（后面的问题才是正真引发思考的一些事实！关于碳排放量的一些个人见解）<br>
+——————————————————————————<br>
+补充资料：耕地种植速生林的影响因素及其政策启示<br>
+补充资料：别让农民为速生林埋单_洪君生_新浪博客</p>
+<p>速生林对土地的破坏主要是对于地下水的破坏，国家对这块有明文规定是禁止林地和鱼池侵占现有的耕地资源，就目前来看速生林对土地确实有一定的影响。</p>
+<p>速生林的种植应该规定：<br>
+1、不得占用现有耕地资源。<br>
+2、速生林种植应该提高更高的经济产量，比如现在有一些技术（速生林里面种蘑菇的技术）。<br>
+3、现有对土壤破坏的速生树木应该尽量向其它对土壤破坏小的树木转换！</p>
+<p>目前中国已经禁止木质一次性筷子的出口，但是竹子的并没有。（之后取消这一规定，提高了关税）</p>
+<p>2015年我国木制一次性筷子（44190031）进出口数据统计及发展情况分析_数据中心_中国产业信息网<br>
+2015年我国竹制一次性筷子（44190032）进出口数据统计及发展情况分析_数据中心_中国产业信息网<br>
+2016年中国竹制一次性筷子产业供需规模现状及市场增速前景分析预测【图】_中国产业信息网</p>
+<p>中国的竹制一次性筷子出口占比42%，这是一个规模非常大的市场</p>
+<p>日本竹制一次性筷子的价格。</p>
+<p>现在一次性筷子大部分使用的是竹子作为原材料，所以讨论一次性筷子对森林的破坏并没有太大的影响。如果种植没有产生经济效益那么很多农村种植的树木都会变成耕地，总的来说对现有的土地风沙化和扬尘问题并不能得到解决，正真在破坏树木绿化的是大面积的城镇化，我们在享受城镇化带来的便利时也在享受绿化减少带来的高温和扬尘。<br>
+————————————————————————————————<br>
+从一次性筷子延伸出来的是中国环保问题和欧美国家对中国经济发展遏制的问题！<br>
+环保和碳排放量限制是欧美国家对发展中国家经济发展遏制最有效的“武器”，还记得2010年柴静曾经采访中科院院士丁仲礼先生的一段视频：</p>
+<p>公平的减排方案 丁仲礼院士接受柴静采访 <a href="http://www.tudou.com/programs/view/37Dssk_WMMs/" target="_blank" rel="noopener">http://www.tudou.com/programs/view/37Dssk_WMMs/</a><br>
+发展中国家发展如果高谈环保那对国家经济发展会起着非常大的压制，所以现在中国经常讨论的一个问题产业转型，既能减少尽量的能源消耗又能大力发展经济的产业，欧美国家必须接受中国14亿人口高速发展的带来更多的碳排放的结果，而共同提高全球产业转型，而不是一味的去遏制发展中国家的发展，自私让欧美人享受更多的社会资源而去减少发展中国家的碳排放量。所以中国在全球气候大会有一项许诺“中国碳排放量会是同时期欧美国家的80%”！高举环保大旗不能定双向标准，发展中国家的发展不是遏制碳排放量（欧美国家发展也是经历了这个过程），而是共同面对解决高污染、高消耗产业的转型，只有这样才能共同减少全球气候问题！</p>
+<p>2016年11月17号又出来一个新闻：<br>
+刘振民驳特朗普：气候变化不是中国骗局 谈判是在美前总统支持下发起<br>
+特朗普说气候变暖是中国制造出来的一个骗局，为了恢复美国制造又把锅甩到中国人身上（马丹明明当初这个理念就是老美为了遏制中国发展提出来的！）</p>
+<p>部分内容转自：<a href="http://blog.qq.com/qzone/739083469/1265705406.htm" target="_blank" rel="noopener">http://blog.qq.com/qzone/739083469/1265705406.htm</a><br>
+原文作了修改，删除部分不合适展示答案！</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/12/18/随笔/20161218《非诚》所得/">《非诚》所得</a>
+            
+            
+            <a class="next" rel="next" href="/2016/12/18/知识搬运工/20161218_2你所知道最冷的冷知识是什么？/">你所知道最冷的冷知识是什么？</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

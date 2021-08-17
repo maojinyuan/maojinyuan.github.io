@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>阅读瞬间总结 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">阅读瞬间总结</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2020/11/14&nbsp;&nbsp;15:55</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h3 id="20201114阅读瞬间总结">20201114阅读瞬间总结</h3>
+<p>劝你自律，不如陪你堕落，再带你逆袭。</p>
+<p>求全之毁，不虞之隙：有意求好，却招来毁bai谤，产生意外的误会</p>
+<p>卖花担上，买得一枝春欲放——李清照《减字木兰花·卖花担上》</p>
+<p>世上有一条唯一的路，除你之外无人能走。它通往何方？不要问，走便是了。——尼采</p>
+<p>看到一句令人忧桑的话：我已经过了餐桌上有只鸡就一定能吃到鸡腿的年纪。</p>
+<p>“ 旧恩恰似蔷薇水，滴在罗衣到死香。” ——刘克庄《宫词四首》</p>
+<p>待千古纵横，来世再夺你朱砂红唇</p>
+<p>人们有的时候就是对自己如此的残忍，喜欢把伤疤撕裂了给人看，以换取那种久违的关注，来告慰自己空虚已久的心灵。</p>
+<p>一页书的价值只存在于它被翻到的时候。——卡尔维诺</p>
+<p>大风起于青萍之末</p>
+<p>窃钩者诛，窃国者侯！</p>
+<p>不能而示之能，则极无能也！</p>
+<p>那推推挤挤同唱同乐的群体情感，那无忧无虑无猜忌的同僚深情，在人的一生之中也只有少年期有。</p>
+<p>简单就是终极的复杂。——达芬奇</p>
+<p>意义不会每天都告诉你它的存在，通过积累慢慢感受出来的。不要拿“没意义”来当退缩的借口。——知乎某答主</p>
+<p>你瞧这些白云聚了又聚，散了又散，人生离合，亦复如斯”涌上心头，慨叹物是人非，世事无常。 ——知乎某答主</p>
+<p>停灯向晓，抱影无眠。</p>
+<p>国虽大好战必亡！天下虽安忘战必危！</p>
+<p>最是人间留不住，朱颜辞镜花辞树。——王国维《蝶恋花》</p>
+<p>仓廪实而知礼节，衣食足而知荣辱。</p>
+<p>见大利而不趋，闻祸端而不备，浅薄於争守之事，而务以仁义自饰者，可亡也。</p>
+<p>法律的震慑力，源于承担犯罪后果的必然性，而非承担犯罪后果的严重性。</p>
+<p>那时我们有梦，关于文学，关于爱情，关于穿越世界的旅行。如今我们深夜饮酒，杯子碰到一起，都是梦破碎的声音。  ——北岛《波兰来客》</p>
+<p>“近之则不逊，远之则怨”</p>
+<p>无知不可怕。无知还有表达的欲望，就很难说了。以所谓的“言论自由”来界定自己的妄言狂语，不仅幼稚，还不负责任。</p>
+<p>如今我走到人生十字路口，我知道哪条路是对的，毫无例外，我就知道，但我从不走，为什么？因为他妈的太苦了。——《闻香识女人》</p>
+<p>“鹰嘴猫眼须发赤，锦缠花腿到腰身。”  猜猜这句诗是描写哪个妖怪的？猜不到？这其实是清朝诗人汪仲洋描写英国人外貌的诗句。</p>
+<p>The Best Revenge is success.</p>
+<p>A Good Heart is BIGGER than Anything.(一颗善良的心比什么都伟大。)</p>
+<p>初从文，三年不中；后习武，校场发矢，中鼓吏，逐之出；遂学医，有所成。自撰一良方，服之，卒。</p>
+<p>“It is really a hard life. Men will not be nice to you if you are not good-looking, and women will nt be nice to you if you are.”——Agatha Christie</p>
+<p>人生就是一场删繁就简。你找不到，那是因为包罗万象，迷了你的眼。</p>
+<p>想起北师大，就会想起老师。没有老师的学校，就是没有酒的坛子，空有余香，却无法醉人。</p>
+<p>一盏一盏灯烘焙了黑夜。</p>
+<p>不是风动，不是幡动，仁者心动而已。——via知乎</p>
+<p>我以容貌之好，得从微贱爱幸于上。夫以色事人者，色衰而爱弛，爱弛则恩绝。——《汉书·孝武李夫人传》</p>
+<p>生活总是充满了模棱两可的陷阱。</p>
+<p>不要用战术上的勤奋掩盖战略上的懒惰。——雷军</p>
+<p>只见一堆人的后背，颈项都伸得很长，仿佛好多鸭，被无形的手捏住了的，向上提着。——鲁迅先生曾这样描述“围观”</p>
+<p>性是在一个人得不到爱时对自己的安慰。——马尔克斯《艺妓回忆录》</p>
+<p>昨天我遇到一个人，感觉他非常有意思，印象深刻。但后来就再也碰不到了。——王家卫说</p>
+<p>爱在右，同情在左，走在生命路的两旁，随时播种，随时开花，将这一径长途，点缀得香花弥漫，使穿枝拂叶的行人，踏着荆棘，不觉得痛苦，有泪可落，却不是悲凉。——冰心</p>
+<p>我的梦想，值得我本人去争取，我今天的生活，绝不是我昨日生活的冷淡抄袭。——司汤达</p>
+<p>为天地立心，为生民立命，为往圣继绝学，为万世开太平。——张载《横渠四句》</p>
+<p>真正坚持到最后的人靠的不是激情，而是恰到好处的喜欢和投入。——via知乎</p>
+<p>当众人都哭时，应该允许有的人不哭。当哭成为一种表演时，更应该允许有的人不哭。</p>
+<p>电影《莫扎特传》中，莫扎特也是个不会做人的天才，但片子尾声留下了这样一句话——“到处都是庸才，我宽恕你们的罪。”</p>
+<h3 id="20200725阅读瞬间总结">20200725阅读瞬间总结</h3>
+<p>C’est la vie<br>
+这，就是人生<br>
+<video src="https://raw.githubusercontent.com/maojinyuan/hexo_repository/main/%E8%A7%86%E9%A2%91/d288b8abdd96493624926ee3223d0735.mp4" controls="controls" width="320" height="570"></video></p>
+<h3 id="20200725阅读瞬间总结-v2">20200725阅读瞬间总结</h3>
+<p>太美的承诺都是因为太年轻</p>
+<p>日出东方催人醒，不及晚霞懂我心。<br>
+辞别再无相见日，终是一人度春秋。</p>
+<p>说真话的最大好处就是，你不必记得你都说过些什么。</p>
+<p>我分不清海和天，我也分不清好人和坏人。</p>
+<p>世人慌慌张张，不过是图碎银几两。<br>
+偏偏这碎银几两，能解世间万种慌。</p>
+<p>君本天外飞仙，奈何人间种田。<br>
+半生桀骜不羁，老来依旧少年!</p>
+<p>有句话说“无用之学的厚度，决定有用之学的高度”。钱钟书先生说，世上所有有趣的事实往往是无用的……在这个浮躁的社会，我们需要一些不去争名逐利地去喜欢一些东西。如果不能变现就不学，生活如同没有感情的菜市场。</p>
+<p>所谓自由，不是随心所欲，而是自我主宰。</p>
+<p>如果尖锐的批评完全消失，温和的批评将会变得刺耳；如果温和的批评也不被允许，沉默将被认为居心叵测；如果沉默也不再允许，赞扬不够卖力将是一种罪行。</p>
+<p>你超越了我们的喜怒哀乐，把我们变得这么渺小。——琼瑶阿姨的台词功底</p>
+<p>汉堡那块肉</p>
+<h3 id="20191010阅读瞬间总结">20191010阅读瞬间总结</h3>
+<p>三日不读书，便觉语言无味，面目可憎。——宋代诗人黄山谷<br>
+(p.s. 这话放在现代会不会被打？hhhh😅)</p>
+<p>要去爱知识，爱智慧，爱民主也爱自由。——王小波</p>
+<p>参差世界才是幸福本源。——罗素</p>
+<p>人一到群体中，智商就会下降。他们为了获得认同，可以抛弃是非，用智商去换取归属感 。——《乌合之众》</p>
+<p>每次看到好的摄影作品，就会想摄影师应该是另外一种方式的小说家，但是一直不知道怎么去诠释这个意思，这次看到一句话，觉得很中意：<br>
+相机如果不是诗人脑袋上的一只眼睛，其中的胶卷就毫无意义。——奥森-威尔士</p>
+<h3 id="20190923阅读瞬间总结">20190923阅读瞬间总结</h3>
+<p>形容一种高兴：这种高兴，超过在小学收到一大笔零花钱，拿到第一部手机。(我在想，能说这话的，童年一定很阔落😫)</p>
+<p>“当你考察那些生存了几百年的公司，你就会发现这些公司往往都是经营酒业的，这是一个非常有趣的现象。”——贝佐斯</p>
+<p>在快速变化的时代，有一定成瘾性和社交性的消费品，都是好东西（烟、酒）。</p>
+<p>谁控制了石油，谁就控制了所有国家；谁控制了粮食，谁就控制了人类；谁掌握了货币发行权，谁就掌握了世界。</p>
+<p>将人形容为雪花其实很准确。只有靠得很近才会发现每一个都是特别而独特的，但远远看去这几十亿人都是一样的。 ——brashboy</p>
+<p>我假装爱说谎，大家就说我爱说谎。我显出一副有钱人的样子，大家就说我有钱。我假装冷漠，大家就说我是冷淡的人。可是，我真的很痛苦，大家都说我假装痛苦。  ——太宰治《斜阳》</p>
+<p>所有神的属性中，我最同情的是：神不能自杀。——芥川龙之介《侏儒的话》</p>
+<p>我时常陷入一种恐惧之中，以为如果别人劝我干什么而自己加以拒绝的话，就会在对方的心灵和自己的心灵中剜开一道永远无法修复的裂痕。难道不反抗也是一种罪过吗？ ——太宰治《人间失格》</p>
+<h3 id="20181018阅读瞬间总结">20181018阅读瞬间总结</h3>
+<p>没有在长夜痛哭过的人，不足以谈人生！（听到这句话是董卿在一个获奖节目上，他说的是歌德说的，但是我去查了一下，似乎是托马斯·卡莱尔）</p>
+<p>管他天下千万事，闲来轻笑两三声。</p>
+<p>“靠水晶球谋生的人注定要吃碎在地上的玻璃。”— 瑞·达利欧《原则》<br>
+“He who lives by the crystal ball will eat shattered glass.” - Ray Dalio</p>
+<p>终是庄周梦了蝶，你是恩赐也是劫。</p>
+<p>要抓紧时间赶快生活，因为一场莫名其妙的疾病，或者一个意外的悲惨事件，都会使生命中断。——奥斯特洛夫斯基《钢铁是怎样炼成的》</p>
+<p>我不再装模作样地拥有很多友人，而是回到了孤单之中，以真正的我开始了独自的生活。有时我也会因为寂寞而难以忍受空虚的折磨，但我宁愿以这样的方式来维护自己的自尊，也不愿以耻辱为代价去换取那种表面的朋友。——余华《在细雨中呐喊》</p>
+<h3 id="20180925阅读瞬间总结">20180925阅读瞬间总结</h3>
+<p>我走过山时，山不说话，</p>
+<p>我路过海时，海不说话，</p>
+<p>小毛驴滴滴答答,倚天剑伴我走天涯。</p>
+<p>大家都说我因为爱着杨过大侠，才在峨嵋山上出了家，</p>
+<p>其实我只是爱上了峨嵋山上的云和霞，</p>
+<p>像极了十六岁那年的烟花。</p>
+<h3 id="20180906阅读瞬间总结">20180906阅读瞬间总结</h3>
+<p>纵然齐眉举案，到底是意难平。</p>
+<p>到了一个可以给别人经验分享的年龄——李健</p>
+<p>音乐救人，知识续命。</p>
+<p>并不是动手打人才算暴力。暴力有很多种，打断你的话，把你扔在大街上，嘲笑你做不到的事，肆无忌惮拿你和别人做对比，都算。让你觉得你不配有更好的人生，是最大的暴力。​​​</p>
+<h3 id="20171109阅读瞬间总结">20171109阅读瞬间总结</h3>
+<p>当我知道我肚子里有着将近八米的肠子，我忽然就原谅了我腰上的赘肉。</p>
+<p>人保护自己有两种方法，一种是利己，追求自身的利益最大化；另一种是利他，通过帮助他人，间接的帮助自己。</p>
+<p>地狱空荡荡，魔鬼在人间</p>
+<h3 id="20171010阅读瞬间总结">20171010阅读瞬间总结</h3>
+<p>我不会惯着你的，你也别惯着我。俩成年人，各抒己见，自食其力，合理碰撞，就行。　　——琦殿</p>
+<p>生孩子是用问题回答问题。　　——贾行家</p>
+<p>目成心许（觉得很美的一个词语，想到了火影CP鸣雏恋😭）</p>
+<h3 id="20170214阅读瞬间总结">20170214阅读瞬间总结</h3>
+<p>个人竞聘，组织评议，群众审核</p>
+<p>阳进胜君子，阴消退小人！</p>
+<p>一个人的命运要靠自我奋斗，也要考虑历史进程。</p>
+<p>夫唯不争，故天下莫能与之争。</p>
+<p>年轻就是好，走路带风还会飞。</p>
+<p>允许一部分    xx用户先火起来</p>
+<p>多少人的旅行只是简单的物理位移？ ​​​</p>
+<p>绵绵春雨懒洋洋，故友不来不起床——松尾芭蕉</p>
+<p>两人对酌山花开，<br>
+一杯一杯复一杯。<br>
+我醉欲眠卿且去，<br>
+明朝有意抱琴来。</p>
+<p>腰缠十万贯，骑鹤下扬州</p>
+<h3 id="20170611阅读瞬间总结">20170611阅读瞬间总结</h3>
+<p>“取本份之财,戒无名之酒,怀克己之心,闭是非之口。”</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/阅读瞬间总结/"># 阅读瞬间总结</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2020/11/14/觉得好就收录了/20201114罗曼罗兰说/">罗曼·罗兰说</a>
+            
+            
+            <a class="next" rel="next" href="/2020/11/14/觉得好就收录了/20201114讨袁檄文/">《讨袁檄文》</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

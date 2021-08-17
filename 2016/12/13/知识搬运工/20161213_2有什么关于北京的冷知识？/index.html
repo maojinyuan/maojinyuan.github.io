@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>有什么关于北京的冷知识？ | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">有什么关于北京的冷知识？</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/12/13&nbsp;&nbsp;1:16</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>全世界都知道，现在的北京，是一座雾霾包围的城。</p>
+<p>但很少人知道，不到一百年前的北京，曾是一座粪便包围的城。</p>
+<p>阿城写过一篇文章，叫《厕所》，说北京的紫禁城虽大，但是没有厕所，皇上太监三宫六院御林军上朝的文武大臣，只能找个旮旯，用马桶解决排泄问题。</p>
+<p>桶底铺上焦枣，焦枣轻，屎落下来，立即翻滚沉底，加上焦枣香气浓，把味道遮住。拉满的马桶，由粗使太监抬出宫去。</p>
+<p>焦枣马桶很气派，但也就是个临时设施。皇上家都这样，老百姓家可想而知。</p>
+<p>作为一个大都市，拉屎这件事，北京折腾了几百年。</p>
+<p>明嘉靖年间，北京修建了外城。城墙修好后，发现忘了修下水道。这下事大了，城内千万百姓，每日产出几何数量级的大粪，北京城分分钟就被屎淹没了。</p>
+<p>明代文人谢肇淛，曾住北京，深为北京没有厕所困扰，他在《五杂俎》写下来这段痛苦的人生体验：</p>
+<p>因为没有厕所，粪便只能倒进沟里，街上也都是随地拉的屎。每到出暖花开，整个北京城就发酵起来，臭气熏天，老百姓都不敢快跑，怕喘大气。</p>
+<p>到了夏天，蚊蝇滋生，几乎让人想死。碰上下雨，大街小巷的粪被泡起来，痢疾瘟疫传染很厉害。当时，怕死的人，都宅在家里——“摄生者。惟静坐简出。”</p>
+<p>这一点，跟现在的北京人很像，遇上雾霾就不出门，或全副武装。</p>
+<p>到了清朝，街上有了厕所，但收费，而且屈指可数，要都去厕所，得排几天队。人民就还在街上随意大小便，嘉庆时无名氏的《燕京杂记》里说，连妇女都上街倒马桶。</p>
+<p>时间久了，有些地方就成了北京人默认的露天公厕。</p>
+<p>当时前门一带，骑马的、坐车的、驴、骡、牛、猪、狗，杂沓乱跑，遍地都是粪尿，正阳桥南边，就有一个大粪堆。各庙会集市，也遍布粪便。</p>
+<p>大栅栏的同仁堂门前，是个默认的露天厕所，每天要先打扫屎尿，再开门。但是，店老板也不恶心，还挺乐呵，他认为这是风水上所说的“百鸟朝凤”——每天那么多人掏出鸟冲着门口，太吉利了。</p>
+<p>最可怕的，一经大雨，路途汪洋，路人一不小心就被屎汤灭顶。今天的北京就好多了，不会被屎汤淹死，但是下暴雨还是得当心。</p>
+<p>当时人开玩笑，将北京大街上的情形，开成一个药方：</p>
+<p>人中黄，人中白，牛溲，马勃，灶心土，各等分，无根水调匀之，用日晒干，车轮碾为细末，西北风送入鼻中服之，令人名利之心自然消灭。</p>
+<p>这种情况下，粪夫就应运而生。</p>
+<p>粪夫多是来北京谋生的山东农民，身背条筐，手持长柄粪勺，走家串户，救民于屎尿。</p>
+<p>掏了屎，运出城，晒成干，卖给近郊农民。</p>
+<p>梁家园，天坛东面的东四块玉，城北的地坛附近，都是晒粪场，蚊蝇聚集，臭气远扬。</p>
+<p>最早的粪夫，掏粪很随意，没个规划，也想不到这是个肥差。</p>
+<p>散户掏粪的情况，持续到了明朝崇祯年间，渐渐有了改变。到清康熙年后，开始圈划地盘，各自采集，称为粪道。</p>
+<p>清末，更是有了粪商，小粪商占据粪道，雇粪夫采粪；大粪啇开设粪厂，搞批发。</p>
+<p>粪夫也有两种，一种是受雇于粪啇的粪夫，一种是野粪夫，称跑海粪夫。</p>
+<p>北京的粪夫，身上最脏，收入最低，算是贫贱至极，本应同情。但是，他们以粪勒索钱财，要节钱，要月钱，下雨下雪要酒钱。</p>
+<p>市民稍有不从，轻则怠工不掏，任你家厕所满坑满谷，污臭熏天；重则推搡相骂，亮出粘满屎的粪杓，就问你怕不怕。</p>
+<p>△ 1917年，北京街头的粪夫，俗称采蜜人。</p>
+<p>他们背粪筐，推小车，招摇过街，筐、车也不加盖，屎尿淋漓挥洒，见人掩鼻而逃，就面露笑容，获得精神胜利。</p>
+<p>俗话说的“穷横”一词，似乎专为粪夫而设。</p>
+<p>受迫的人，抓住一点点权利，又去压迫别人，这就是人性吧。</p>
+<p>市民被欺压怕了，呼他们为“粪阀”，阀者，霸也。事实上，真正的粪阀是粪厂的老板们，他们有自己的行业协会，还提出了自己的理论：粪道归粪商所有，粪道上的屎也归粪商所有——如果你敢掏自己拉的粪，就是侵犯了粪商的私有财产。</p>
+<p>△天坛东边的精忠庙，是粪夫公会的最早地址。</p>
+<p>当时，粪业被称作“金汁行”，因为办粪厂太挣钱了。最著名的粪商于德顺，坐拥良田1500亩，在北京有100多套房产，各国银行都有存款。</p>
+<p>民国后，市政当局曾力劝粪夫给粪筐、粪车加盖，效果不彰。后来，又试图将粪业收为官办，也遭到顽固抵抗。</p>
+<p>1935年，1500名粪夫带着粪筐粪杓，包围了平津司令部，抗议政府收回粪道。粪夫罢工几天，城中便臭不可言，当局就软了。</p>
+<p>北京依旧是臭哄哄的北京。</p>
+<p>当然，解放后，一切大不同。按照建国后的阶级划分，粪夫被划为底层，比如大家都知道的时传祥，而粪厂的老板被划分资产阶级。</p>
+<p>1951年12月，粪霸于德顺、刘春江、金仁甫被枪决。从此废除粪道占有行业。也就是，你的屎从此是国有财产了。</p>
+<h3 id="参考书目-论文：">参考书目/论文：</h3>
+<ul>
+<li>《五杂俎》谢肇淛</li>
+<li>《旧京琐记》夏仁虎</li>
+<li>《燕京杂记》佚名</li>
+<li>《旧时北京粪便和垃圾的污染》王伟杰</li>
+<li>《北京的粪夫和粪阀》金瑞祥</li>
+</ul>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/12/13/知识搬运工/20161213_1恐龙是如何灭绝的？/">恐龙是如何灭绝的？</a>
+            
+            
+            <a class="next" rel="next" href="/2016/11/24/随笔/20161124虚拟表情/">虚拟表情</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

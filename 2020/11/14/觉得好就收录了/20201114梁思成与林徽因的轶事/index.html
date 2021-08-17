@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>梁思成与林徽因的轶事 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">梁思成与林徽因的轶事</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2020/11/14&nbsp;&nbsp;14:43</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>一个朋友是梁家亲戚，回忆起家人谈梁林，那种羡慕与略带醋意的语调，即便隔了几十年仍然让人感觉扑面而来–林徽因在建筑设计上有着过人的敏感，然而，只有她的家人知道，这位才女在和梁思成一起工作的日子里，从来只肯画出草图便要撂挑子。后面，自有梁思成来细细地将草图变成完美的成品。而才女林徽因这时便会以顽皮小女人的姿态出现，用各种吃食来讨好思成。</p>
+<p>这段轶事，是2003年的时候才知道的，以之询于中央美院参加过人民英雄纪念碑设计组的教授，那位一贯艺术家风度极强的老先生，脸上露出的是孩子气的微笑：</p>
+<p>梁思成不在的时候，林徽因的图并不是不能自己画。</p>
+<p>也许，她要的就是这种被思成宠着的感觉。而宠着林徽因，只怕也是梁思成最大的快乐。</p>
+<p>女人，有时可以不讲理一下？</p>
+<p>女人，有时可以不讲理一下。</p>
+<p>徐志摩在紧追林徽因时，发现前来寻他的张幼仪已经怀孕，便说：“把孩子打掉。”那年月打胎是危险的”。张说：“我听说有人因为打胎死掉的。”徐说：“还有人因为坐火车死掉的呢，难道你看到人家不坐火车了吗？”</p>
+<p>从这一段对话，也许可以看出徐志摩和梁思成最不同的地方。</p>
+<p>当因了陆小曼的一个个烟泡而为钱奔忙不堪，随飞机坠落的那一瞬间，徐志摩可会想到张幼仪？</p>
+<p>张幼仪终身不曾言徐之不是。</p>
+<p>男人，委实没有不讲理的权力。</p>
+<p>梁思成也罢，金岳霖也罢，都是那种有一副宽厚温暖的胸怀，可以让女人靠一下的男人。林徽因在北京城墙上的坚持，尽显一个建筑学家的执着与刚烈，但是，再刚烈的女子，恐怕也无法避免对身后有一副坚实臂膀的期待。这种说不清的东西，就是一个男人的责任。</p>
+<p>有时候，放弃也是一种对爱的负责，比如金岳霖最后一刻的弃权。</p>
+<p>林徽因对徐志摩的感情，可以从很多地方看出来，一如我们每个人都可能有自己曾经深爱而又终于未能相守终生的人，即便几十年的风雨过后，依然在你心中一角深深埋藏。关于林徽因和徐志摩的评价，大概还是要用梁从诫先生的话来说吧，我以为那是最贴切的说法–“徐志摩的精神追求，林徽因完全理解，但反过来，林徽因所追求的，徐志摩未必理解……”</p>
+<p>一个男人面对一个远比自己成熟的女子，就算他是中国的雪莱，在恋爱的季节，也不是一个乐观的兆头。</p>
+<p>所以，林没有选择徐，几乎可说是命中早已注定的事情。</p>
+<p>当胡兰成用一块砖头把张爱玲变成被砸晕了的快乐女孩的时候，梁思成正在为林徽因清理前面路上所有可能绊倒她的杂木乱石，有时候，还会被林徽因用砖头砸一个两眼发黑。</p>
+<p>婚姻是一座城，它可以围困你，也可以守护你。</p>
+<p>梁思成究竟因为什么原因使林徽因最终投下终身？林徽因自己没有回答，她说，会用一生来回答这个问题。</p>
+<p>今天的日本，最美丽的旅游城市，就是京都和奈良，一个世俗，一个出尘。</p>
+<p>如果没有梁思成，早就没有京都，也没有奈良了。</p>
+<p>1944年，时任中国战区文物保护委员会副主任的梁思成，奉命向美军提供中国日占区需要保护的文物清单和地图，以免盟军轰炸时误加损伤。这份材料，是梁思成历尽心血完成的。</p>
+<p>但梁思成希望美军能将另外两个不在中国的城市也排除在轰炸目标之外–日本的京都和奈良。</p>
+<p>1932年，上海淞沪会战中，十九路军抗敌的前线，一个清华大学出身的年轻炮兵军官在激战中因无医无药殉于阵中。</p>
+<p>梁思米，吃大米，梁思忠，吃大葱……</p>
+<p>这是后来的火箭专家梁思礼先生当年写下的句子。梁家，大体就是这样一个快乐的地方。</p>
+<p>这个年轻的炮兵军官就是梁思成的亲弟弟梁思忠。</p>
+<p>1941年，在成都，日军利用恶劣天气，以诡异的云上飞行方式奇袭中国空军双流基地，一个中国飞行员不顾日机的轰炸扫射，冒死登机，起飞迎战，在跑道尽头未及拉起就被击中，壮烈殉国。</p>
+<p>三年后，林徽因依然为这个战死的中国飞行员写了一首哀婉的长诗，叫做《哭三弟恒》。</p>
+<p>这个中国飞行员，就是林徽因的三弟，“在北平西总布胡同老宅我们叫做三爷的那个孩子”–林恒。</p>
+<p>因了国恨家仇，梁思成先生进入营造学社后从不与日本人交往。在长沙大轰炸的烈火中，谦谦君子的梁思成怒吼出：“多行不义必自毙，总有一天我会看到日本被炸沉的！”</p>
+<p>所以当梁思成提出保护京都和奈良时，在当时的人们看来是一个难以理解的决定，而且，也超出他的工作范围。但是，他依然这样做了，而且并不是临时起意而已。他的弟子罗哲文这样记载他们从事这项工作时候的情景：“他们住在重庆上清寺中央研究院……每天，梁先生拿过来一些图纸，让罗哲文根据他事先用铅笔标出的符号，再用绘图仪器绘成正规的地图。罗哲文虽然没有详问图纸的内容，但大体可以看出，地图上许多属于日本占领区的范围。而梁先生用铅笔标出的，都是古城、古镇和古建筑文物的位置。还有一些地图甚至不是中国的。当时罗哲文虽然没有仔细加以辨识，但有两处他是深有印象的，那就是日本的古城京都和奈良。”</p>
+<p>梁思成这样解释他提出这个建议的原因–“要是从我个人感情出发，我是恨不得炸沉日本的。但建筑绝不是某一民族的，而是全人类文明的结晶。”</p>
+<p>至今，依然有日本人认为当年侵略中国，是文明对野蛮的战争。</p>
+<p>那么，有梁先生这样的中国人，就是在无言地告诉后人，日本人那时是在戕害一个怎样高贵的民族。</p>
+<p>林徽因选择的梁思成，是怎样的一个男人。他不一定有徐志摩的才华，也不一定有胡兰成的浪漫，但是，梁思成，是那种胸中真正有一个大海的男人。</p>
+<p>谁能看到这片大海，谁才能配得上梁思成。</p>
+<p>有人问梁思成和林徽因在一起幸福吗？</p>
+<p>我不知道。</p>
+<p>我只知道在抗战中，他们曾共同守在贫穷的李庄。那时，梁思成的脊椎病使他必须穿上铁马甲才能坐直，体重降到四十七公斤；那时，林徽因在日日咯血的生死线上挣扎，“几个月的时间就毁灭了她曾经有过的美丽”。那是真正的受难，没有电，没有自来水，每日伴随他们的是臭虫和油灯。</p>
+<p>然而，当外国友人邀请他们定居美国的时候，这一对苦难中的人拒绝了。他们说，中国在受难，他们要与自己的祖国一起受苦。</p>
+<p>林徽因在回答“日本人来了怎么办”这句话时，平静而言：“门外不就是扬子江？”</p>
+<p>而另一件值得一提的事情，是由于奈良附近的军事目标众多，1945年，盟军不得不作出对其进行轰炸的准备。而为了最大限度地保护奈良的历史遗迹，盟军需要一张标明详细文物地点的地图。</p>
+<p>这一次，画这张图的，是林徽因。</p>
+<p>当抗战胜利的时候，人们才知道，他们竟然在李庄写出了十一万字的《中国建筑史》，两个人那时每天为了这部书工作到夜半，竟然“欲罢不能”。</p>
+<p>我真的不知道梁思成和林徽因是不是幸福。</p>
+<p>(完)</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2020/11/14/觉得好就收录了/20201114《澜本嫁衣》节选/">《澜本嫁衣》节选</a>
+            
+            
+            <a class="next" rel="next" href="/2020/11/14/觉得好就收录了/20201114《嫁给南极》/">《嫁给南极》</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

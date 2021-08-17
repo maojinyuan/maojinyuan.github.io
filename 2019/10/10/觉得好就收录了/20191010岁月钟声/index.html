@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>《岁月钟声》 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">《岁月钟声》</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2019/10/10&nbsp;&nbsp;16:54</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>我读的小学是县立第五小学，简称五小，在城北承天寺的旁边，对面是天地坛。五小有一支校歌：“西挹神山爽气，东来邻寺疏钟，看吾校巍巍峻宇，连云栉比列其中。半城半郭尘嚣远，无女无男教育同。桃红李白，芬芳馥郁，一堂济济坐春风。愿少年，乘风破浪，他日毋忘化雨功。”</p>
+<p>“巍巍峻宇”，“连云栉比”，实在过于夸张了。但记忆中学校门外的地势确比校内高，进大门，要下一个慢坡，慢坡是“站砖”铺的。不是笔直的，而是有点弯。不知道为什么，我们对这道弯弯的慢坡很有感情。如果它是笔直的，就没有意思了。</p>
+<p>慢坡的东端是门房，同时也是校工詹大胖子的宿舍。詹大胖子的主要职务是摇上课 铃、下课铃。这间小屋原来盖了是为了当门房即传达室用的，但五小没有什么事可传达，来了人，大摇大摆就进来了，詹大胖子连问也不问。这间小屋就成了詹大胖子宿舍。他在屋里坐着，看看钟。他屋里有一架挂钟。这学校有两架挂钟，一架在教务处。詹大胖子一早起来第一件事便是上这两架钟。喀啦喀啦，上得很足，然后才去开大门。他看看钟，到时候了，就提了一只铃铛，走出来，一边走，一边摇：叮当，叮当，叮当……从南头摇到北头。上课了，学生奔到教室里，规规矩矩坐下来。</p>
+<p>每逢国文课都是要背诵的。一年级开头是“大狗跳，小狗叫”，后面有《咏雪》这样的诗：“一片一片又一片，两片三片四五片，七片八片九十片，飞入芦花都不见。”我学这一课时才虚岁七岁，可是已经能够感受到“飞入芦花都不见”的美。我现在写散文、小说所用的方法，也许是从“飞入芦花都不见”悟出的。我觉得那时的语文课本有些篇目是选得很好的。</p>
+<p>后来，有一班毕业生凑钱买了一口小铜钟，送给母校留纪念，詹大胖子就从摇铃改为打钟。一口很好看的钟，黄铜的，亮晶晶的。铜钟用一条小铁链吊在小操场边的梧桐树上。铜钟有一个锤子，悬在当中，锤子下端垂下一条麻绳。詹大胖子扯动麻绳，钟就响了。钟不打的时候，绳绕在梧桐树干上，打一个活结。</p>
+<p>梧桐树一年一年长高了。钟也随着高了。五小的孩子也高了。</p>
+<p>詹大胖子还有一件常做的事，是剪冬青树。詹大胖子很胖，但是剪起冬青树来很卖力，他好像跟冬青树有仇，又好像很爱这些树。</p>
+<p>詹大胖子还给校园里的花浇水。</p>
+<p>秋天，詹大胖子扫梧桐叶。学校有几棵梧桐。刮了大风，刮得一地的梧桐叶。梧桐叶子干了，踩在上面沙沙地响。</p>
+<p>詹大胖子还做什么事呢?他给老师烧水。烧开水，烧洗脸水。教务处有一口煤球炉子，詹大胖子每天生炉子，用一把芭蕉扇忽哒忽哒地扇。煤球炉子上坐一把白铁壶。</p>
+<p>他还帮先生印考试卷子。詹大胖子推油印机滚子，先生翻页儿。考试卷子印好了，就把蜡纸点火烧掉。烧油墨味儿飘出来，坐在教室里都闻得见。</p>
+<p>每年寒假、暑假，詹大胖子要做一件事，到学生家去送成绩单。全校学生有二百人，詹大胖子一家一家去送。成绩单装在一个信封里，信封左边写着学生的住址、姓名，当中朱红的长方框里印了三个字“贵家长”。右侧下方盖了一个长方图章“县立第五小学”，学生的家长是很重视成绩单的，他们拆开信封看：国语98，算术86……看完了就给詹大胖子酒钱。</p>
+<p>詹大胖子和学生生活最最直接有关的，除了摇上课铃、下课铃，——打上课钟、下课钟之外，是他卖花生糖、芝麻糖。詹大胖子很坏，他的糖比外面摊子上的卖得贵。但是五小的学生只好跟他去买，因为学校有规定，不许“私出校门”。</p>
+<p>校长张蕴之不许詹大胖子卖糖，把他叫到校长室训了一顿。校长对学生说：学生在校不许吃零食;詹大胖子的糖不卫生;他赚学生的钱，不道德。</p>
+<p>但是詹大胖子还是卖，偷偷地卖。他摇下课铃或打上课钟的时候，左手捏着花生糖、芝麻糖，藏到袖筒里。有学生要买糖，走近来，他就做一个眼色，叫学生随他到校长、教员看不到的地方，接钱，给糖。</p>
+<p>五小的学生差不多全跟詹大胖子买过糖。他们长大了，想起五小，一定会想起詹大胖子，想起詹大胖子卖花生糖、芝麻糖。</p>
+<p>詹大胖子就是这样，一年又一年，过得很平静。</p>
+<p>詹大胖子的铃摇着摇着，钟打着打着，我们便长大了，便到了小学高年级了。</p>
+<p>教五年级国文的是高北溟先生。他很喜欢我，我的作文几乎每次都是“甲上”。在他所授的古文中，我受影响最深的是明朝大散文家归有光的几篇代表作。归有光以轻淡的文笔写平常的人物，亲切而凄婉。这和我的气质很相近，我现在的小说里还时时回响着归有光的余韵。教六年级国文的是张敬斋，张先生据说很有学问，他教我们《老残游记》，讲得有声有色。给我留下印象最深的是大明湖上的对联 <strong>“四面荷花三面柳，一城山色半城湖”</strong>，这使我对济南非常向往。</p>
+<p>我对五小很有感情。每天上学，暑假、寒假还会想起到五小看看。夏天，到处长了很高的草。有一年寒假，大雪之后，我到学校去，大门没有锁，轻轻一推，开了。没有一个人，连詹大胖子也不在。一片白雪，万籁俱静。我一个人踏雪走了一会，心里很感伤。</p>
+<p>我十九岁离乡，六十六岁回故乡住了几天。我去看看我的母校：什么也没有了。承天寺、天地坛，都没有了。五小当然没有了。</p>
+<p>这是我的小学，我亲爱的，亲爱的小学!“愿少年，乘风破浪，他日毋忘化雨功!”</p>
+<p><strong><div align="right">——汪曾祺</div></strong></p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2019/10/10/觉得好就收录了/20191010华而不实/">《华而不实》</a>
+            
+            
+            <a class="next" rel="next" href="/2019/10/10/觉得好就收录了/20191010谚语/">谚语</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

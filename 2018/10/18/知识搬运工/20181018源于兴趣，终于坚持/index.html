@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>“源于兴趣，终于坚持” 的几个小故事 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">“源于兴趣，终于坚持” 的几个小故事</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2018/10/18&nbsp;&nbsp;21:12</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h2 id="1-张小龙刻意练习长达7年">1.张小龙刻意练习长达7年</h2>
+<p>2011年，张小龙突然对高尔夫发生兴趣，并陷入狂热状态，刚开始练习时每天去球场打掉400个球。不仅自己热衷打高尔夫，张小龙还鼓动身边的所有朋友去打高尔夫。</p>
+<p>好友和菜头表示，不论是谁陪张小龙去打球，他都对朋友们的球技赞不绝口，台词全都一样：XX，我可以确定，你就是个高尔夫天才；XX，你的动作非常标准，我看到了你的潜力。</p>
+<p>就这样，张小龙骗了一堆人和他打球，不到一年就已经超过了身边的大多数朋友。几年以后，张小龙就不再满足于业余时间训练，将练习时间改为上午下午连续作战。</p>
+<p>这一练就是7年。就像马云喜欢练习太极，并从太极中悟出企业经营之道那样，张小龙在练习高尔夫的过程中也从中领悟到了人生的真理。</p>
+<p>不仅如此，作为一名业余选手，他的球技已经让他成为不容职业选手忽视的高手，张小龙的身影开始越来越频繁地出现在全世界各地职业球手身边。</p>
+<p>始于兴趣，终于坚持，7年刻意练习终于问鼎冠军，背后的秘诀是什么？</p>
+<p>好友和菜头在其文字里透露出了答案：刻意练习。刻意练习是佛罗里达州立大学心理学家 K. Anders Ericsson 提出的概念：</p>
+<p>有效进步的关键在于找到一系列的小任务让受训者按顺序完成。这些小任务必须是受训者正好不会做，但是又正好可以学习掌握的。完成这种练习要求受训者思想高度集中，这就与那些例行公事或者带娱乐色彩的练习完全不同。</p>
+<p>张小龙学打高尔夫就是如此。他从每天去球场打掉400个球开始，渐渐掌握一些技术后开始请教高手，并且喜欢在群里和朋友们分享打球技巧，他做的都是有目的的练习。</p>
+<p>投入大量时间精力，加上正确的方法和深度学习能力，将知识技能与原有的经验关联起来，是张小龙能够跨界成功的关键。</p>
+<h2 id="2-为参赛40小时不睡-韩寒终于证明了自己赛车手的身份">2.为参赛40小时不睡，韩寒终于证明了自己赛车手的身份</h2>
+<p>10月5日，由韩寒执导的赛车动作喜剧《飞驰人生》曝光了先导预告片，目前定档2019年大年初一贺岁片，引起了粉丝们的狂欢。</p>
+<p>因为作为新晋导演，有别于前两部影片《后会无期》《乘风破浪》，《飞驰人生》中包含很多赛车元素，而赛车正是韩寒的最爱。</p>
+<p>18岁那年，韩寒用《三重门》的100多万版税改装了他的第一台赛车，开始正式接触拉力赛。2003年，他第一次加入了车队，北京极速车队收留了他。虽然这支车队没有任何赞助商，但是他很开心成为了职业赛车手。</p>
+<p>赛车是个烧钱的运动，改装需要高昂的费用，参赛费也是自己出。作为新人，为了能维持自己的开销，韩寒烧光了所有的版税去练车，把所有的精力都放在赛车上。</p>
+<p>在最辛苦的2004年，由于所在的车队退出了拉力赛，连维修都没有了支持。比赛前两天，他用自己的版税去修车，修了整整两天时间，整整40个小时没有睡觉。但他从未轻易放弃。</p>
+<p>赛车是韩寒从小就喜欢的事，他想要像崇拜的赛车手那样开车。那时候在他的心里，一切都要为赛车让道，却总有人以为他只是玩票。人们更多的是把他当成一个高中辍学、不务正业的“作家”。</p>
+<p>这种情况持续到2009年，直到韩寒加入了斯巴鲁中国拉力车队，拿下了拉力赛和场地赛的双料年度总冠军。人们才开始注意到这个80后的实力赛车手。</p>
+<p>因为这两个年度总冠军，任何一个在赛车界都是统治级别的。直到今天，中国赛车界都没有第二个人，能在同一年拿下拉力赛和场地赛的双料总冠军。</p>
+<p>从那以后，韩寒的人生仿佛开了挂，不断拿赛车冠军，不断出新书，电影票房过10亿成为知名导演……</p>
+<p>正如一位网友所说，不会开赛车的作家不是好导演。如果中国将有一部出色的赛车电影，我想韩寒是唯一一个能完成它的人。</p>
+<h2 id="3-不满足国内特效水平-谢霆锋自己开公司-年盈利3-7亿">3.不满足国内特效水平，谢霆锋自己开公司，年盈利3.7亿</h2>
+<p>打开谢霆锋的百度百科，其中的标签，除了歌手、演员、音乐创作人、制作人、主持人，还有“青年企业家”和“PO朝霆创始人”。自从出道以来，他在音乐与影视上都取得了不俗的成就，很多人不知道的是，他在商业上的发展同样不可小觑。</p>
+<p>刚出道那几年，当时国内的特效制作水平很低，很多著名的歌手都是将自己的MV送到国外专业公司去加工的，谢霆锋也不例外。</p>
+<p>但之后谢霆锋与国外的公司发生了矛盾，这让他很不满，于是和父亲商量自己创办一家专业的特效制作公司。他在香港西环租了一层楼开后期制作公司，主打影视特效处理，这个公司就是Po朝霆。</p>
+<p>要知道当年拍电视剧和电影都是靠道具来呈现效果的，很多剧都没有特效。眼光独到的谢霆锋意识到这一点后马上行动，从国外引入先进的机器，找了一个团队来打理业务。2009年后，又在上海、北京开设分公司。</p>
+<p>后来的结果也证明，他的选择是正确的，自2012年后，Po朝霆公司每年的盈利能达到3.7亿，谢霆锋赚得盆满钵满。</p>
+<p>经过十多年的发展，PO朝霆成为了中国顶级的特效公司，每年大部分的国产电影的后期制作可能都出自于谢霆锋的这家特效公司。后来数字王国收购了PO朝霆，谢霆锋摇身一变成为了数字王国大中华区主席。</p>
+<p>这些年，我们听到很多明星跨界创业的故事，看起来似乎没那么难，因为我们总把名人创业想得太容易。</p>
+<p>一开始，谢霆锋买二手机，买错了机器，花了一大笔维修费；然后，又遇上产业转向数位的过渡期，先前购置的设备全为底片而来，让他傻了眼。</p>
+<p>另一方面，他怕自己的“名气”影响公司正常营运，在幕后当隐藏老板长达8年，默默在后面帮公司找案子、牵线，名片上挂着的是“茶水部主管”。</p>
+<p>直到2012年，他被全球排名前15名的香港科技大学商管学院纳入首位华人MBA案例，受邀赴校演讲，他才正式以“企业老板”的身份出道。</p>
+<h2 id="4-裂变创业10家公司-宗毅同时玩遍50个国家">4.裂变创业10家公司，宗毅同时玩遍50个国家</h2>
+<p>说起宗毅，不熟悉他的人，可能连他的名字也没听说过；而熟悉他的人，则是他的超级粉。他成立的芬尼克兹公司，被“罗辑思维”创始人罗振宇称为转型互联网最成功的企业。</p>
+<p>1970年，宗毅出生于新疆，1992年大学毕业后到广东一家公司担任工程师。2002年1月，和合作伙伴创建广东芬尼克兹节能设备有限公司，开始了他传奇的创业之旅。</p>
+<p>2004年，当时公司还比较小。有一天，宗毅的营销总监突然离开公司去创业了，不论宗毅提出多么优厚的条件，甚至股份，都留不住对方。对方在外面成立了一间跟宗毅一模一样的公司，让他开始思考如何留住剩下的6位高管。</p>
+<p>2005年，芬尼克兹有一个很关键的元器件要进口，但找不到合适的供应商，宗毅最后决定让公司的高管每人拿出5万块钱，成为一个公司的股东，大家重新成立一个公司来做这个项目。</p>
+<p>6个高管中，2个因为不信任而没有投，四个高管投了二十几万，剩下的由宗毅和另外两个联合创始人一起出。</p>
+<p>钱到位以后，原本预计一年半投产，但实际用时7个月，新团队就把这个产品做出来了，而且效果不错。宗毅说，用的是自己的钱，和用老板的钱，是不一样的。</p>
+<p>这个产品第一年做了400多万的业务额，但利润大概有120万，年终分红，分了一半，大概六十来万。为什么？就是要让那两个人不加入的人后悔一辈子。投入也才五六十万，首年回报率就百分之百。这事一发生，整个公司都沸腾了。今天这个公司的回报率大概是600%。也就是说，当年入五万的，现在每年拿30万。</p>
+<p>2007年，宗毅想做一个新项目，需要投资100万，结果几个同事一夜之间就凑了220万，后来新项目又成功了。以此类推，宗毅独创的裂变式创业一共催生了10家公司，被中欧商学院作为经典教案。</p>
+<p>不仅如此，在创业的十几年间，他还自助旅行了50多个国家，帮特斯拉建充电站，最终打通了中国第一条电动车南北充电之路，被多家媒体报道。</p>
+<p>他有一句名言广为传播：对新生事物的好奇心，是我此生看好的最大投资。</p>
+<h2 id="结语：那些跨界成功的人-都有这4种特质">结语：那些跨界成功的人，都有这4种特质</h2>
+<blockquote>
+<p>为什么这些已经成功的人跨界以后依然能取得成功？普通人能够从中得到哪些启发？</p>
+</blockquote>
+<p><strong>1、对极致的追求</strong></p>
+<p>2011年，微信刚刚诞生不久，这个在腾讯内部并不被看好的项目差点胎死腹中，身为产品经理的张小龙压力很大。也是在这一年，张小龙接触了高尔夫，在紧张的开发工作之余开始练习高尔夫。</p>
+<p>即使只是单纯的兴趣，张小龙也希望能把它做到最好，终于在7年后成了业余爱好者中的佼佼者。这种对极致的追求，不仅体现在他对高尔夫的态度，也体现在他对产品体验的追求。</p>
+<p>谢霆锋创办影视特效公司也是如此。既然国内没有人能做到国外的先进水平，那就自己想办法做。为此他不惜买二手机器进行各种尝试，想方设法找团队，为的是做出最好的特效。</p>
+<p>韩寒从小就喜欢赛车，当有机会进入这个领域时，他对自己的要求非常苛刻。因为只有坚持把车技磨炼到最好，先让自己获得参赛资格，才能有更大的发展。</p>
+<p><strong>2、强大的执行力</strong></p>
+<p>真正的牛人，都有很强的执行力。想做就去做，不会把时间花在纠结向左还是向右走，而是永远向前走。因为再强大的焦虑，也会败给行动力。</p>
+<p>当时并不是没有人意识到电影后期的重要性，但因为追求更好的后期效果，谢霆锋在没有任何经验的基础上打算自己做，需要承担极大的风险。这背后，强大的执行力是他成功的原因之一。</p>
+<p>韩寒刚开始接触赛车的时候，没有车队愿意收留他，好不容易有一个车队愿意收留，也面临着巨大的经济压力。他只能一边坚持练习车技，一边写书赚稿费来养活自己。从2003年第一次加入车队到2009年获得赛车冠军，韩寒坚持死磕5年才证明了自己。</p>
+<p>很多事情，如果你只是想而不行动的话，那真的会永远都停留在想象中。当去仔细分析自己的目标，并考虑当前的生活中有那些是你可以改变和努力的，定期去总结和思考如何进一步改善，去行动几年，目标和梦想才会离你越来越近。</p>
+<p>事情不能等条件具备了才去做，很多事情不一定有钱才能做到，有钱当然更好，没钱就多去努力、思考、行动和坚持。</p>
+<p><strong>3、坚持死磕的精神</strong></p>
+<p>青年作家彭小六曾说：“所谓的牛逼，不过是像一样在坚持，最后来了点运气。”</p>
+<p>做任何事都离不开重复二字，但坚持恰恰成为了很多人失败的理由。他们已经被所谓的坚持这个门槛给挡在门外了，根本看不到坚持之后还有什么更光明的前景。</p>
+<p>宗毅在创立芬尼克兹之前，有过2次失败的经历。1998年10月，一个偶然的机会，宗毅参与创建了广东天元电器有限公司，任研发部部长，不幸的是在2001年，公司停业。</p>
+<p>2001年初，和合作伙伴一起再次创建广东天元电子科技有限公司（2004年停业），任总工程师，第一次成为公司的小股东；但由于和大股东经营理念不一致，于2002年1月辞职。</p>
+<p>这两次参与创业的经历虽然都以失败告终，但为宗毅后来坚持创业提供了至关重要的经验，让他2002年创立的芬尼克兹最终活了下来。</p>
+<p>正如俞敏洪所说：一个人，即使没有任何背景，靠着日复一日的坚持和努力，学会聚焦，在一个领域做到极致，也能闯出属于自己的一片天地。</p>
+<p><strong>4、对能力的迁移</strong></p>
+<p>著名生涯规划师古典在《你的生命有什么可能》一书中说到，人的能力分为「知识、技能和才干」三个层次：</p>
+<p>知识是最没有迁移能力的，你读到医科博士，可能也不会做麻婆豆腐；</p>
+<p>技能通常由70%的通用技能和30%的专业技能组成，迁移性要好一些；</p>
+<p>而到了才干层面，职业之间的界限就完全被打破了。</p>
+<p>这就解释了为什么那些牛人能够轻易地在不同领域之间进行跨界，因为他们已经通过深度学习达到了某一领域的才干层面，而这些才干在其它领域同样适用，所以只需要花少量的时间熟悉知识与技能就能玩得转。</p>
+<p>但反过来，如果你在一个领域从未达到过才干层面，当换到其它行业时，只能从底层的知识和技能重新开始，这就非常吃力了。所以，掌握“才干”尤为重要。</p>
+<p>谢霆锋本身是演员，主持人，歌手，他在这方面的才干使得他对后期效果比外行有更深的理解。宗毅前几年在一线研发的经验培养了他对产品和技术的理解能力。</p>
+<p>张小龙和高尔夫也同样如此。好的产品需要每个细节都做到极致，高尔夫需要每个细节都要极致才能足够精确，同时这两件事又都需要有大局判断，有共通的层面。</p>
+<p>每个人都有自己最擅长的一面，当你想尝试一个新领域的时候，不妨想想原有的能力是否可以进行迁移。从牛逼的地方出发，拆分出技能和才干，把他们迁移到需要的领域，就能创造不一样的结果。</p>
+<p>跨界是一件“高手”才能做的事。先做好一件事，做好另一件事的可能性也会更大。</p>
+<p>正如越来越火的“斜杠青年”，很多人努力想当，但是他们都搞错了，斜杠是原因，不是目的，先做好单杠，才有机会做斜杠。跨界也同样如此。那些真正厉害的人，不管跨界做什么都厉害。</p>
+<p>请记住，没有一个真正的高手，是突然牛逼起来的，没有一个人能够随便跨界成功，所有跨界成功都绝非偶然。</p>
+<p>Ref：</p>
+<p>1、业余选手张小龙 by和菜头 @槽边往事</p>
+<p>2、他如何创出10家公司，顺道玩遍50个国家 | 宗毅的裂变式创业 by宗毅 @书单</p>
+<p>3、赛车手韩寒 by金铭儿 @金铭儿</p>
+<p>4、谢霆锋不满国外特效公司，于是自己开了家，没想到每年赚一亿多 by小废66</p>
+<p>5、真正决定你人生高度的，是深度学习能力 by周岭 @清脑</p>
+<p>► 禁止从本页面转载，转载请联系他们授权。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2018/10/18/随笔/20181018我所敬佩的身边的人/">我所敬佩的身边的人</a>
+            
+            
+            <a class="next" rel="next" href="/2018/10/18/知识搬运工/20181018范冰冰逃税事件的一些值得一读的观点/">范冰冰逃税事件的一些值得一读的观点</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

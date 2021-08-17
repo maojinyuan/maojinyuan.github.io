@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>&lt;给儿女一封信&gt; | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">&lt;给儿女一封信&gt;</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2017/11/09&nbsp;&nbsp;19:16</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/随笔/">随笔</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>给儿女一封信：</p>
+<p>自从有家，有了你们，虽然家里有点拮据，但每每看到你们，都好像给了我们无形的动力，生活打理的有条理有序，孩子走出来像模像样，在拼命得赚钱，有好的学校读，接触更好老师和同学，多学点知识，都学点本领，使你们不落后同龄人，我们知道这样做，感觉你们童年时光就这样给爸妈占有，好像没有童年快乐的时光，为了这个家，为了生活，你们兄妹也付出很多，早些年你们在外读书，想想有点欠缺，有点愧疚，对不住你们，人家的孩子是养着，宠着，我家的孩子做着，教着，爸妈虽然兄弟姐妹多，可是都帮不上忙的，只有靠你们，靠我们自己，把我们的生活搞好，那时大家都好像有使不完的劲，只要想到的，就完全可以做到，那时候多齐心，都充实啊，这背后其实也少不了开心和家的温暖。一路走来，我想你们也感觉到因为你们的磨炼，使你们也懂得了做人道理和阅历的经验。&lt;写到此，我有点不由的眼眶.…&gt;这么多年来，你们要感谢你妈妈，倾注心血把你们拉扯大，真的不容易，好多事都由她担当着，爸好多事情不如妈妈，都是妈妈在引导我，使我对生活更好的向往。看到你们健康的成长，看到你们开心更乐开怀，这也许做父母最大的荣耀。爸妈最先明的对比就是说啦就过啦，我是说了过不了。正是这样的原因，我们身体有极大的反差，尽管如此，我们的身体都不尽如人意。我们经常思量着到一处没有喧闹的，没有烦恼的地方生活多好啊。每况家里有事，都是妈妈在唠叨不休，爸爸每次都怕说了心里难受，不敢太多指责你们，这也许是天下做母亲牵挂和责任吧！所以妈妈对你们的牵挂高于一切，难道…<br>
+远远，皓皓，顺便提一下燕燕，还有冯子鑫，他们两个只有妈妈大度大量接纳他们，最困难最疲惫时候来到我们家里，尽我们的所能竭力帮助孩子，我想是一个做母亲的本性。现在你们都已经长大成人了，都有明辨是非，懂得做人的道理。<br>
+一生要强的妈妈，假装坚强，可背后的辛酸无人知晓，只有他自己明白，为你们暗自流过多少泪，也许只有她心里清楚。有时静下来，仔细看看照片墙，有种说不出的滋味涌上心头，看见你们的笑容灿烂，多阳光，你们长大了，我们老了，我们已过半百，还有半百还得继续，想想现在力不从心，还有你们的以后，都是做父母永远的牵挂。<br>
+皓皓你上次突如其来举动，让爸妈大感伤心，说实在爸爸妈妈暗自流过泪，那时阵，感觉人都要崩溃样的，我们深爱的女儿怎么一下子，给我们后半生大大的打了一个折扣，到现在我还跳不出这个阴影里面，感觉生活无味无趣，事已至此，我们还是祝福你们。看到椀儿天真可爱的样子，我们也少了些烦恼，但我们终归是要生活愿日子会一天天好起来。<br>
+此次皓结举动确实让我也感到意外，就这么点小事，何必呢？我也不知如何是好，如何面对，我想打骂也己经过时了，心里真不是滋味。一个是女儿，一个是外甥，一个是不懂事就做了母亲，一个是调皮成性的孩子，难道你们就为了这点小事拗着，值吗？有些事就应该大的让着小的，保护小的，身边很简单事，哥哥让着你，私地替你分担种种，再简单的，飞飞和椀儿相差无几，可舅舅在旁，也不时督促飞飞别弄着椀儿，小事情，看大问题，这就从小教育孩儿学会礼貌和谦让。反过来说，不是偏袒说话，虽然小宝淘气，总惹事，可这些年我们也看到他的好，他的成长。他有些地方真的我们可以借鉴一下。他现在说过，做过，走过，开导他，他就是嘴上说说，过后还是积极的举动。这是一大进步，看人家的好，抛开人家的坏。皓皓你虽然年纪轻，但你已经是为人妻，为人母啦，爸爸在这里说的就是你要学会成长，学会谦让，学会尊敬大人，你现在是几个家要兼顾的人了，不能再使小孩子脾气，你有了孩子就要给椀儿树立榜样，不能有些事由着性子来。这么多年我是第一次…爸爸有些话说的不中听，不如意，但凡天下做母亲的我想都有一份宽厚，仁慈的心，像你对待椀儿对待身边的人。我感觉现在你不尽已往，是否生活的压力，还是带椀儿的辛苦，爸妈看在眼里，疼在心里，现在不敢多说你们，说的不好，怕你们生气，做的不好，怕你们悔气，也许慢慢的，你们懂，我们懂。</p>
+<p>柳暗花明，水到渠成。<br>
+说的不中听，你们别当真。<br>
+做的不合理，你们别在意。<br>
+成长道路上，要学会谦让。<br>
+儿女已成长，我们已变老。<br>
+你们的健康，是我们牵挂。<br>
+祝你们万事如意，平安健康生活着。<br>
+愿你们接受一个不想多说话，已是很疲惫的爸爸，致上。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2017/11/09/知识搬运工/20171109中国断肢再植技术/">中国断肢再植技术</a>
+            
+            
+            <a class="next" rel="next" href="/2017/11/09/随笔/20171109微信、qq的重要性/">微信、qq的重要性</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

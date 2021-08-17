@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>令狐冲与杨过 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">令狐冲与杨过</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/10/18&nbsp;&nbsp;1:09</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p><strong>一</strong></p>
+<p>令狐冲曾经是很容易愤怒的。</p>
+<p>那一年，在一个洞穴的石壁上，他无意中读到了一行字：</p>
+<p>“张乘云张乘风尽破华山剑法。”</p>
+<p>令狐冲的反应像是被人踩到尾巴一样，“勃然大怒”。</p>
+<p>金庸写下了他当时的心理活动：</p>
+<p>“无耻鼠辈，大胆狂妄已极！”</p>
+<p>“华山剑法精微奥妙，天下能挡得住的已屈指可数，有谁胆敢说得上一个’破’字？更有谁胆敢说是’尽破’？”</p>
+<p>他甚至气得拿起刀子，要去砍掉这行字。</p>
+<p>每次读到这一段心理活动，都觉得特别有意思。</p>
+<p>首先，令狐冲根本不认识这写字的人，完全不知道这所谓“张乘云张承风”是何方神圣、武功到底怎么样。可他看到这行字的第一反应，就是想都不想，立刻开骂，“无耻鼠辈、大胆狂徒”地喷过去。</p>
+<p>其次，令狐冲当时压根就没见识过天底下真正一流的武功。别说葵花宝典、独孤九剑、吸星大法了，就连什么黄钟公的“七弦无形剑”、桃谷六仙的撕人术之流都还没见过。</p>
+<p>但他就是有一股子莫名其妙的自信，坚定地认为“华山剑法精微奥妙”“天下能挡得住的屈指可数”。</p>
+<p>事实上，能挡住他家华山剑法的，真是屈指可数吗？明显不是。</p>
+<p>我们后来发现，且不论那些顶尖高手了，连桃谷六仙都个个挡得住，嵩山十三太保也个个都挡得住，任我行后来上华山一下就带了八个长老，也个个都挡得住……这哪是什么“屈指可数”，已经两手两脚都数不过来了。</p>
+<p>可是如果你遇到那时的令狐冲，去和他分辨这些，大概没说两句，就要被他“无耻鼠辈、大胆狂徒”地喷一脸口水了。</p>
+<p><strong>二</strong></p>
+<p>我们再作一个有趣的对比：</p>
+<p>令狐冲所见到的这一行字，杨过也见到过完全类似的。</p>
+<p>有一次，在古墓里，杨过和小龙女偶然地发现了壁上有一行字，和令狐冲所看到的内容非常像，大意就是：“王重阳破《玉女心经》于此”。</p>
+<p>书上的原话叫做“玉女心经，技压全真。重阳一生，不弱于人”。</p>
+<p>可是杨过的反应和令狐冲的大不一样。</p>
+<p>他是先“微一沉吟”，问道：“是王重阳写的？”然后“笑道”：“这牛鼻子老道吹牛。”</p>
+<p>“微一沉吟”是思考，“笑道”是调侃。你看，几乎完全相同的情况，同样是有别人扬言能破自家的武功，杨过完全不像令狐冲一样“勃然大怒”，他居然可以先经过脑子想一想，而后还能保持轻松的心态，还能幽默得起来，并没有“无耻鼠辈、大胆狂徒”地喷过去。</p>
+<p>这就有意思了：为什么两个人反应完全不一样？是杨过的境界比令狐冲高吗？当然不是的。少年的杨过很压抑、很偏激，其实不如令狐冲倜傥潇洒。</p>
+<p>那么，是因为令狐冲太爱师门了、太爱华山派了，所以才听不得别人能破华山的武功？这肯定也不是——难道杨过就不爱古墓派、不爱自己和姑姑生活的地方吗？</p>
+<p>更何况，令狐冲对那所谓“张乘云张乘风”过去从没听过，无冤无仇；而杨过对王重阳却是一肚子气。他小时候曾在全真教受过欺负，连带恨上人家祖师爷了，后来看到王重阳的画像，都要几大口唾沫吐过去。</p>
+<p>为什么偏偏在“破武功”这件事上，杨过更开明、更有境界，而令狐冲更愣、更愤青？</p>
+<p><strong>三</strong></p>
+<p>我们最容易想到的原因，大概就是在武功这件事上，杨过比早期的令狐冲更见过世面。</p>
+<p>在进古墓之前，人家杨过可是见过顶级高手的，亲眼见识过郭靖、欧阳锋的武功，小小的心灵里早就留下了“天外有天”的道理。</p>
+<p>后来小龙女教育杨过的时候，也从来不灌输什么古墓派无敌、古墓派必胜、犯古墓者虽远必猪。开学第一天，她就直截了当告诉杨过：“我本事胜不过那全真教的老道丘处机，更加比不上你的郭伯伯。”</p>
+<p>和小杨过比，令狐冲那时真是有一点点井蛙，是真没见过什么世面。</p>
+<p>他固然知道有个传说中的“天下第一高手”东方不败，可那只是一个虚幻的符号而已。本人亲眼见过的最强的高手，就是师父和师娘；见过的最高水平的战斗，也就是他师父和余沧海打的一架。</p>
+<p>师父师娘每天给他灌输的，全是我华山派怎么怎么厉害、怎么怎么威震江湖、气宗如何如何了不起，“本门功夫练到深处，飞花摘叶，俱能伤人”“华山九功，第一紫霞”“气功一成，便都无往而不利……”</p>
+<p>一个从小在山窝窝里长大的孩子，成天被师父灌输这些，他当然要觉得华山剑法牛得不行了：</p>
+<p>“本门武学如此厉害，任何一招剑法在师父手底下施展出来，又有谁能破解得了？”</p>
+<p>所以，一遇到人家质疑，他就要像被踩到尾巴一样“无耻鼠辈，大胆狂徒”地一阵猛喷了。</p>
+<p><strong>四</strong></p>
+<p>除了没见过世面之外，令狐冲早年的愤青体质还有别的成因。</p>
+<p>我们来看看下面这几句对话：</p>
+<p>小师妹岳灵珊说：“大师哥，除了侠气，你还有一样气……是傲气”“你骄傲得紧”。</p>
+<p>令狐冲的师弟陆大有则说：“大师哥是一众师兄妹的首领，有点傲气是应该的。”</p>
+<p>你瞧，大家都公认令狐冲有股子傲气。而他“傲”的资本是什么呢？说白了无非就是“一众师兄妹的首领”，是“华山首徒”，是知名武林门派的大弟子而已。</p>
+<p>他当时武功不强，也没有什么卓越的见识，在江湖上的存在感全是靠刷“华山派”三个字。只有混同在这个集体里，他才找得到自己的价值。没了这个壳，他的“傲”就无所归依，就什么都不是。</p>
+<p>一旦有人冒出来说华山派不行，他当然就要大怒——你说华山派不行，就等于说我不行。我绝不答应。</p>
+<p>另一个类似的例子是郭芙，你要是说郭家武功有什么毛病，她一定要恼羞成怒。道理是一样的，她明白自己其实很平庸，没了郭家这个共同体加持的光环，她的优越感就没办法维系。</p>
+<p>再看杨过，我们就会发现完全不一样。</p>
+<p>杨过从小就没法奢望靠某个集体来刷存在感。桃花岛他呆不下去，全真教他也呆不下去，后来加盟了古墓派，可古墓派是一个相当冷门、在江湖上本来就很没有存在感的门派。</p>
+<p>和早期的令狐冲比，杨过更早地学会了独立，一直是靠自个儿练本事、长见识，追求自己的价值。</p>
+<p>对于杨过来说，别人批评我的集体不行、批评我的门派不行，不等于说我不行。所以他也就不至于暴跳如雷。</p>
+<p><strong>五</strong></p>
+<p>说到底，江湖上愤青的“愤”，来自于两个东西：一是贫乏低幼的见识，二是无处安放的尊严。</p>
+<p>令狐冲后来为什么脱胎换骨，不再愤青了？因为他长见识了，战冲虚、斗任我行、力拼东方不败，会遍了天下高手；他还在江湖上证明了自我的价值，从“华山首徒”变成了“一代大侠”，他的傲气和尊严有了安放的地方，自然而然就也不愤青了。</p>
+<p>我猜想，哪怕后来再遇到有人自称“尽破独孤九剑于此”，他也肯定不会暴怒着跳起来：“无耻鼠辈，大胆狂妄已极！”也不会再拿刀子去刮人家的石壁、屏幕之类，最多也就说一句：</p>
+<p>我也替你们着急呀！你们毕竟，还图样！</p>
+<p><strong><div align="right">文／六神磊磊</div></strong></p>
+<p><strong>Ref：</strong> <a href="http://cinacn.blogspot.com/2016/07/blog-post_31.html" target="_blank" rel="noopener">http://cinacn.blogspot.com/2016/07/blog-post_31.html</a></p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/10/19/知识搬运工/20161019社交本质/">社交本质</a>
+            
+            
+            <a class="next" rel="next" href="/2016/10/17/觉得好就收录了/20161017一个很好的词/">一个很好的词</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

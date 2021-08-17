@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>恐龙是如何灭绝的？ | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">恐龙是如何灭绝的？</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2016/12/13&nbsp;&nbsp;1:18</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>流星撞击理论是上世纪八十年代才提出的，可以说相对而言是一个很新的理论。确切地说，撞击地球的是一颗bolide（中文应该是『火流星』？）。这个理论的提出完全是一个意外，Walter Alvarez后来回顾这件事的时候，说：“In science, sometimes it’s better to be lucky than smart.”</p>
+<p>我就来讲讲关于这个理论的故事。</p>
+<p>很早的时候，人们就注意到了化石中反映出的生物多样性的变化。1841年，英国地质学家John Phillips根据生物多样性的变化，把有显著的生物出现的时代分为三段：</p>
+<p>自下而上分别是古生代、中生代和新生代。</p>
+<p>古生代与中生代之间被称为『二叠纪-三叠纪灭绝事件(Permian-Triassic extinction)』；中生代与新生代之间被称为『白垩纪-古近纪灭绝事件(Cretaceous-Paleogene extinction)』或者『白垩纪-第三纪灭绝事件(Cretaceous-Tertiary extinction)』或者简称『K-T Boundary』。（其实大规模的灭绝事件有五次，这里就不多说了。）</p>
+<p>注意，Phillips分出这三代并非仅仅因为它们中间有『断层』，还因为这三代的化石差异很大。</p>
+<p>我们现在讨论的恐龙灭绝，就发生在K-T Boundary。（额，为什么不用C来代表Cretaceous呢？因为C已经被之前的Carboniferous用过了。）</p>
+<p>与Phillips同时代的英国地质学家Charles Lyell注意到了这些生物多样性的『断层』。</p>
+<p>Lyell认为，这些『断层』不可能是由突发事件而导致的，而仅仅是因为能找到的化石不够全罢了。大批生物突然就灭绝了，这怎么可能呢？一定是某段时期的化石丢失了，或者本身就没有形成化石。（用今天的技术估计，Lyell所推测的『某段时期』大概长达6500万年。）</p>
+<p>Darwin也注意到白垩纪末期的『断层』，他在《物种起源》里说：</p>
+<p>With respect to the apparently sudden extermination of whole families or orders, as of Trilobites at the close of the palaeozoic period and of Ammonites at the close of the secondary period, we must remember what has been already said on the probable wide intervals of time between our consecutive formations; and in these intervals there may have been much slow extermination.</p>
+<p>他也认为，这些『断层』大概是化石记录的不完整导致的。</p>
+<p>Lyell和Darwin之后，这样的『均变论(Uniformitarianism)』在学术界一直占主导地位。可是，就算是化石缺失，恐龙的灭绝毕竟是一个板上钉钉的事情。这到底是什么原因导致的呢？于是，科学家们就提出了各种各样的猜想：</p>
+<p>然而这些猜想都没有特别确凿的证据来支持，同时也很难证伪……</p>
+<p>所以，『恐龙灭绝』始终没有一个主流的解释，直到我们的主角登场：Walter Alvarez（下图右）。</p>
+<p>上世纪七十年代，Walter Alvarez是纽约的Lamont Doherty Earth Observatory的一位地质学家。当时，『地磁逆转（每过一段时间，地球的南北磁极会对调）』是一个热门的研究方向，Alvarez也在做这个方面的研究。他与他的同事们在意大利的Gubbio找到了一种粉色的石灰岩(scaglia rossa)，这种石灰岩的形成过程记录了地磁逆转的时间点。</p>
+<p>同时，这种石灰岩里包含了很多微小海洋生物（Foraminifera，有孔虫门）的化石。</p>
+<p>Alvarez发现了一个奇怪的现象：白垩纪末期的石灰岩里，有孔虫门的化石种类繁多，体积较大；在这岩石之上，有一层一两厘米厚的clay（中文是『黏土』？），其中没有任何的有孔虫门化石；而在这层clay之上，又有很多有孔虫门的化石，但种类很少，而且普遍很小，与之前的化石完全不同。</p>
+<p>大概就像这样：</p>
+<p>用Alvarez的话来说，这个变化『看起来实在是太突然了(looked very abrupt)』。更重要的是，较大化石消失的时间点，正好是恐龙灭绝的时间点。Alvarez认为这恐怕不是偶然，于是他打算弄清楚这层薄薄的clay代表了多长一段时间。</p>
+<p>怎么才能知道这段时间有多长呢？Walter（为了避免混淆，以下都用名来称呼）向父亲Luis Alvarez求助。Luis是诺贝尔物理学奖得主，总之是各种厉害，也是一个很有个性的人。当得知Walter的这个问题之后，Luis非常感兴趣，并且提出可以利用元素铱(Iridium)来测量这层clay的时间。</p>
+<p>怎么利用铱来测量时间呢？原理其实很简单：</p>
+<p>铱在地球上很稀少，但在流星中却很常见。所以，铱会以『宇宙尘（cosmic dust）』的形式，以一个稳定、缓慢的速度落到地球上。这层clay形成的时间越长，其中就会含有越多的铱。</p>
+<p>铱落到地球的平均速率大概是每平方厘米每年10<sup>{-13}克，而包含这层clay的十厘米厚的岩石中测出了约10</sup>{-7}克的铱。所以，这十厘米的岩石正常形成所需的时间是10<sup>{-7}/10</sup>{-13}=10^{6}年。</p>
+<p>然而，还记得Walter最开始到Gubbio是研究地磁逆转的吗？通过scaglia rossa，他们已经测出包含这十厘米的两米厚的岩石是花了大约0.5\times10^{6}年时间形成的。</p>
+<p>问题来了：200 cm厚的岩石花了0.5\times10^{6}年就形成了，其中一段10 cm厚的岩石怎么可能要花10^{6}年才形成呢？也就是说，那10 cm厚的岩石中，铱的含量爆表了(off the chart)，所以应该不是正常累积下来的。</p>
+<p>为了确认，Walter去了一趟丹麦，从Stevns Klint（石灰岩峭壁）中取了另一份白垩纪末期的岩石样本，其中铱的含量也爆表了。而随后从新西兰的South Island采集来的样本中，铱的含量也爆表了。</p>
+<p>这到底怎么回事？没有人能解释。Luis预感到这绝对将是一个伟大的发现。用他同事的话来形容，Luis得知铱爆表的消息后的反应『如同鲨鱼嗅到了鲜血一般(like a shark smelling blood)』。</p>
+<p>Walter和Luis提出了很多理论来解释这一现象，但一一被实验数据推翻。在长达一年的讨论之后，他们发表了Extraterrestrial Cause for the Cretaceous-Tertiary Extinction这篇论文，其中提出了流星撞击理论：在约6500万年前的某一天（后来修改为6600万年前），一颗直径6英里的小行星与地球相撞。释放出能量的数量级约等于一百万亿吨TNT的爆炸当量，随后，撞击产生的碎片与尘埃（包含铱）蔓延全球，白天变成黑夜，温度骤降，大灭绝开始了。</p>
+<p>流星撞击理论一提出便受到了强烈反响，当然这其中也少不了Time、Newsweek这些杂志的宣传炒作。然而古生物学界却是一片谩骂的声音，比如一位古生物学家接受纽约时报采访时说：</p>
+<p>The arrogance of those people is unbelievable. They know next to nothing about how real animals evolve, live, and become extinct. But despite their ignorance, the geochemists feel that all you have to do is crank up some fancy machine and you’ve revolutionized science.</p>
+<p>（那些人简直自大到让人难以置信的地步。他们对于动物是如何进化、生存与灭绝的一无所知。尽管如此无知，他们却认为只需要摆弄摆弄一些看起来很高端的仪器就可以颠覆科学了。）</p>
+<p>当然，这些批评与质疑的出现并不是毫无道理的。科学界有一句名言：</p>
+<p>Extraordinary claims require extraordinary evidence.</p>
+<p>石破天惊的断言需要非同寻常的证据。</p>
+<p>可是这个理论除了爆表的铱以外，还有什么证据可以支持呢？</p>
+<p>更重要的是，正如之前所说的，Lyell和Darwin之后，学界的主流观点是均变论(Uniformitarianism)，所以对于大多数科学家来说，『流星撞击理论』是NOT EVEN WRONG。并不是说这个理论缺乏可证伪性，而是这个理论是在解释一个根本没有发生的事件！！</p>
+<p>还记得吗？一直以来，学界都认为化石反映的生物多样性的『断层』仅仅是因为化石不全，而灭绝事件本身依然是一个逐渐发生的过程。现在Walter和Luis不仅提出了灾变论(Catastrophism)的观点，而且还用了一个几乎毫无证据的小行星撞击事件来解释。这不就是想搞个大新闻，再把主流观点批判一番么？！</p>
+<p>然而，科学家们越是研究K-T Boundary，Lyell的均变论就暴露出越多的不足。化石记录的问题并不在于会使『缓慢的灭绝』显得『突然』（Lyell所说的化石缺失），而在于会把『迅速的灭绝』的时间拉长。为什么这么说呢？看图：</p>
+<p>图中最大的白圆表示很少化石化(fossilized)的物种，中等的白圆代表较容易化石化的物种，而小白点代表非常容易化石化的物种。因为有这样的数量关系的存在，即使这三种物种同时灭绝，最大的白圆也会看起来最先消失——因为数量最少。这被称为Signor-Lipps Effect。</p>
+<p>均变论受到质疑的同时，支持流星撞击理论的证据越来越多，比如『冲击石英(Shocked Quartz)』：</p>
+<p>冲击石英只有在极高压、有限温度下才能形成。地球上只有三个地方可以找到冲击石英：陨石撞击坑、核试验场所和实验室。（火山活动不足以形成冲击石英，所以它的存在可以显示撞击坑是由陨石撞击形成的，而非火山喷发。）</p>
+<p>1984年，科学家在Montana东部的岩石的K-T Boundary中发现了冲击石英。</p>
+<p>接着，在Texas南部，科学家发现了一层白垩纪末期的不寻常的沙岩。这种沙岩的成因似乎是剧烈海啸，而如此剧烈的海啸应该会冲刷海岸，留下特殊的印记，沉积下来。于是Walter扫描了数以千计的岩芯，终于在墨西哥湾找到了这种特殊的印记。</p>
+<p>最终，一个直径约为一百英里的陨石坑在尤卡坦半岛(Yucatán Peninsula)被发现，陨石坑之上有半英里厚的沉积物。这个陨石坑与预测的小行星撞击坑完全一致。</p>
+<p>其实这个陨石坑是被『重新发现』的。在上世纪五十年代，一家墨西哥国营石油公司曾经发现了它，但当时人们以为这只是海底火山口。海底火山口是不会有石油的嘛，所以这里就被渐渐遗忘了。</p>
+<p>而当Walter去寻找石油公司曾在那块区域的钻出的岩芯时，他们被告知岩芯已被一场大火烧毁。所幸岩芯最后还是找到了，只是当时记不得放哪儿了而已。</p>
+<p>找到岩芯之后，1991年，Walter确定了岩芯的确切地点，并在该地点找到了一层特殊的熔岩速凝体，而且恰恰是在K-T Boundary发现的。</p>
+<p>这个发现彻底说服了科学家们，流星撞击理论终于被主流学界认可。</p>
+<p>Walter后来在回顾理论提出(1980年)到被学界认可(1991年)这段日子时说：</p>
+<p>Those eleven years seemed long at the time, but looking back they seem very brief. Just think about it for a moment. Here you have a challenge to a uniformitarian viewpoint that basically every geologist and paleontologist had been trained in, as had their professors and their professors’ professors, all the way back to Lyell. And what you saw was people looking at the evidence. And they gradually did come to change their minds.</p>
+<p>（那十一年在那个时候显得很漫长，但回过头来看，这段时间其实非常短。想想，当时每一个地质学家和古生物学家一直以来学习的都是均变论，这些科学家的教授也学的是均变论，他们的教授的教授也是，一直可以追溯到Lyell。然而，你要挑战的正是均变论的观点。但，你可以看到，人们确实是看证据说话的。他们最终确实改变了他们的看法。）</p>
+<p>到此为止，这个故事可以告一段落了。</p>
+<p>有两点要注意：</p>
+<p>1.这些研究是Walter与他的同事（包括他的父亲）一起完成的，但为了叙述方便，我很多地方就只写了Walter一个人。</p>
+<p>2.正如@Mandelbrot的答案中写的那样，火流星撞击地球并不是恐龙灭绝的直接原因，这次撞击给地球生态系统带来的影响才是关键。就是说，恐龙不是被火流星撞死的…不要误会…</p>
+<p>最后有一点点想说的：</p>
+<p>这个问题是『恐龙是如何灭绝的』，其实只要回答『火流星撞击所带来的后果』以及一些其他影响因素就好了，所以可以说我这篇回答的大部分内容都是答非所问的。</p>
+<p>我叙述这个故事，除了回答这个问题本身以外，也是想让大家了解，一个科学理论是怎样被提出、怎样被接受的。</p>
+<p>科学并不是一拍脑袋就想出来什么理论然后一锤定音的，而是需要通过观察现象、提出假设、作出可证伪的预测或判断、收集证据、检验与修改等等一系列步骤才可以得出结论的。</p>
+<p>同时，科学家从来不会说自己的理论是『永远正确的』。理论被一次次修改或推翻，科学才能够进步。</p>
+<p>科学是用证据说话的。只要能拿出足够有说服力的证据，科学家很愿意接受新的理论，哪怕之前的理论已经主导了上百年。</p>
+<p>但前提是，证据要有说服力。</p>
+<p>对于一个不可以用调查或实验来验证的理论，并不一定是错误的，但一定不是科学的。而且，当我说它『不一定是错误的』的时候，其实『错误』一词是尚未定义的。如果这个理论都不可证伪，只要其本身自洽，那什么叫『错误』呢？</p>
+<p>最后，希望大家始终记得这句话：</p>
+<p>Extraordinary claims require extraordinary evidence.</p>
+<p>那么就这样=w=</p>
+<h3 id="参考资料以及图片来源：">参考资料以及图片来源：</h3>
+<ul>
+<li>Elizabeth Kolbert, The Sixth Extinction</li>
+<li>The Sixth Extinction? A Reporter At Large - The New Yorker</li>
+<li>Earth Science的课件讲义</li>
+</ul>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2016/12/18/知识搬运工/20161218_5人类历史上有过哪些疯狂的计划？/">人类历史上有过哪些疯狂的计划？</a>
+            
+            
+            <a class="next" rel="next" href="/2016/12/13/知识搬运工/20161213_2有什么关于北京的冷知识？/">有什么关于北京的冷知识？</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>蛋白质如此重要，为什么体内没有储存八种必需氨基酸的机制呢？ | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">蛋白质如此重要，为什么体内没有储存八种必需氨基酸的机制呢？</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2017/10/10&nbsp;&nbsp;13:14</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>看到有的朋友在疑惑：既然人体能够把摄入的氨基酸合成为蛋白质，为何又说人体不能储存氨基酸？请有此疑问的朋友思考下面三个问题：</p>
+<p>1、储存的定义是什么？它与人体把摄入的氨基酸合成为蛋白质有何区别？</p>
+<p>2、人体的状态是一成不变的，还是随时在变化的？</p>
+<p>3、为什么你吃很多食物（即便是高蛋白低脂肪食品）而不运动，只能长一身肥膘，却不会长出一身肌肉？</p>
+<p>知乎上有意思的问题越来越少了，好不容易遇到一个当然要回答。简单说，人体不能储存氨基酸，是因为两个原因：</p>
+<p>1、储存氨基酸（或蛋白质），不会给人体带来足以在自然选择中胜出的优势；</p>
+<p>2、储存氨基酸（或蛋白质），却会给人体带来可能被自然选择淘汰的风险。</p>
+<p>由于以上两个因素，即使在漫长的生物演化史中出现过能够储存氨基酸（或蛋白质）的个体，也会被自然选择所淘汰，而不能逐渐累积下来成为普遍现象。如果把氨基酸（或蛋白质）和碳水化合物（糖）、脂肪在这两方面做个对比 ，就能看得更清楚一些，下面我就把储存糖原/脂肪相对于储存蛋白质的优势细说一下。</p>
+<p>先说风险，这里要引进一个概念：食物生热效应（thermic effect of food，缩写为TEF），指某种营养素或某种食物在消化、吸收、转运、代谢和储存过程中消耗的能量。显然，如果一种食物的生热效应过高，则身体吃下这种食物后从中实际得到的热量必然较少（例如有些观点认为芹菜和葡萄柚是“负热量”食物，就是因为身体从中获取的热量不足以弥补消化吸收的消耗）。这对于因热量过剩而苦于肥胖困扰的现代人来说当然是件好事，但对于经常面临饥饿威胁的野生动物（也包括一百年前及更早期的人类）而言，就不是什么好消息了。</p>
+<p>说到这你应该已经知道我要说什么了——蛋白质的食物生热效应是不是比碳水化合物和脂肪更高？对，而且不是高一点点，是高出许多（以下百分比系消耗量与食物本身提供热量之比）：</p>
+<p>碳水化合物的生热效应：5~10%（不同文献的数据有差异，有低至5%的，也有高达15%的）</p>
+<p>脂肪的生热效应：3~5%（不同文献的数据有差异，有低至3%的，也有高达10%的）</p>
+<p>蛋白质的生热效应：20~30%（不同文献的数据有差异，有低至20%的，也有高达35%的）</p>
+<p>需要注意的是，这差异主要来源于合成阶段：将脂肪转化为甘油三酯所需的能量最少，将葡萄糖转化为糖原所需的能量稍多，而将氨基酸转化为蛋白质所需的能量最多。所以，即使在现代人摄入热量和蛋白质都过剩的时候，也是将多余氨基酸脱去氨基再转化为脂肪储存——直接把氨基酸以蛋白质形式储存起来的能耗太高了，自然状态下经常面临饥饿威胁的野生动物和早些年的人类即便偶（bu）然（xing）通过基因突变有了这个功能，也很容易因为消耗能量太多而被一波接一波的饥荒淘汰掉。</p>
+<p>再说好处，我在之前的Live里曾经提到过，碳水化合物作为“理想能量来源”的一个重要原因是它既能满足高强度运动（无氧糖酵解）的需要，也能满足中低强度（有氧氧化）运动的需要（相比之下，脂肪和蛋白质只能通过有氧氧化供能，无法为身体进行高强度运动提供所需的能量），且在进行有氧氧化时，其输出功率要比脂肪和蛋白质的有氧氧化高出大约100%（也就是说能让你跑得更快），这在自然界动物的生存竞争中可谓是生死攸关：</p>
+<p>![谁跑得慢，谁就得死！不是饿死，就是被咬死！]<a href="https://blog-1304066760.cos.ap-guangzhou.myqcloud.com/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/%E8%B0%81%E8%B7%91%E5%BE%97%E6%85%A2%EF%BC%8C%E8%B0%81%E5%B0%B1%E5%BE%97%E6%AD%BB.jpg" target="_blank" rel="noopener">https://blog-1304066760.cos.ap-guangzhou.myqcloud.com/零散的文件/谁跑得慢，谁就得死.jpg</a>)</p>
+<p>所以身体以糖原的形式储存一定量的碳水化合物是非常有必要的——没有这个机制的生物更容易因为跑不过捕食者或猎物而被淘汰。但既然如此，那为什么身体还要储存脂肪呢？这我在为什么人体储存能量以脂肪的形式为主，而不是以肌肉储存能量呢？ - 知乎 里曾经解释过，此处再复述一遍：</p>
+<p>1、糖原饱含羟基，储存时是以水合物形式存在（脂肪疏水就没这个问题），身体每储存每一克糖原，就要相应储存三克水。而同样重量的糖原所含能量又不及脂肪的一半（按完全氧化释放的能量算，每克脂肪相当于2.3克碳水化合物，如果按完全氧化后产生的ATP分子数算，则是每克脂肪相当于2.5克碳水化合物），也就是说，储存相同的能量，脂肪带来的体重增加只是糖原的1/9~1/10（1克脂肪对应2.3~2.5克糖原再加上6.9~7.5克水）。</p>
+<p>2、同样地，由于糖原储存时以水合物形式存在，其体积也大大增加。人体每储存一克脂肪约占据体积1.2毫升，而每储存一克糖原所占据的体积将近5毫升，大约是脂肪的4倍。如前所述，由于同样重量的脂肪所含能量是糖原的2.3~2.5倍（取决于是按释放能量算还是生成的ATP分子数算），所以储存相同的能量，脂肪所占的体积也只是糖原的1/9~1/10。</p>
+<p>这里你可以捏捏身上的肥肉，想象一下，如果动物和人类只能以糖原形式储存能量，那么这些肥肉变成储能相等的糖原后，体积和重量都要变成原来的十倍……那么上面猎豹追击羚羊的画风就会变成下面这样：</p>
+<p><img src="https://blog-1304066760.cos.ap-guangzhou.myqcloud.com/%E9%9B%B6%E6%95%A3%E7%9A%84%E6%96%87%E4%BB%B6/%E7%8C%8E%E8%B1%B9%E8%BF%BD%E5%87%BB%E7%BE%9A%E7%BE%8A%E7%9A%84%E7%94%BB%E9%A3%8E.jpg" alt="猎豹追击羚羊的画风"><br>
+总之，完全以糖原代替脂肪来储存能量会让身体变得庞大沉重，行动不便，不利于在追逐猎物或是逃避捕食者中胜出，所以不把脂肪作为储能主要形式的机制也会被自然选择所淘汰。</p>
+<p>（食物生热效应在这里也有一定作用，但相比之下不是主要因素，如前面给出的数据所示，碳水化合物和脂肪的食物生热效应的差异远不如蛋白质和脂肪/碳水化合物大）</p>
+<p>综上所述，在漫长的演化之后，自然界最终为人体选择的储存机制如下：</p>
+<p>（一）多余氨基酸只能以脂肪形式储存，决不能以蛋白质形式储存——储存蛋白质既不能带来碳水化合物高功率输出（有利于快速跑动追击猎物或逃避捕食者）的优势，也不能带来脂肪用很少能耗、体积和重量储存大量能量（有利于度过饥荒和身体轻巧追击猎物或逃避捕食者）的优势，却会因为高得多的食物生热效应而大幅度增加能量消耗，从而更容易在饥荒时饿死。所以摄入的氨基酸在满足了身体组织新陈代谢需求后，多余部分只能被脱去氨基后作为燃料烧掉，或转化为脂肪储存。</p>
+<p>（二）多余碳水化合物必须以糖原形式储存一部分，但不能太多——碳水化合物能提供高功率输出，有利于追击猎物或逃避捕食者，但储存太多又会让身体变得庞大沉重，行动不便，反而不利于追击猎物或逃避捕食者。所以最终通过自然选择遴选的机制是以糖原的形式少量储存碳水化合物以备紧急之需（例如人体肝糖原储备在不进食的情况下只能满足一天的能量需求，之后只能靠糖异生来补充，而肌糖原也只能维持大约70<sub>75%最大吸氧量强度下运动90</sub>120分钟），其余的碳水化合物仍然要转换为脂肪再储存。</p>
+<p>（三）储存多余能量主要靠脂肪，但不能全靠脂肪——如前所述，脂肪能够以最低代价（食物生热效应，占据体积和重量）储存最多能量，因而是身体储存多余能量的主要途径（正常身材的人体内脂肪足够连续步行20天或跑步5天）。但如果全以脂肪形式储存能量，就无法满足突发紧急情况下高强度运动的需要（脂肪有氧氧化的能量输出功率只及糖有氧氧化的一半，无氧糖酵解的四分之一），不利于追击猎物或逃避捕食者，因而仍然要以糖原形式储存一部分能量，以备紧急情况时动用。</p>
+<p>（人体在饥饿时会分解肝糖原来补充血糖，但不会分解肌糖原补充血糖，也是同理——肌糖原要留着紧急时刻拼命用）</p>
+<p>以上就是人体“大量储存脂肪，少量储存碳水化合物，绝不储存蛋白质”的原因所在。演化与自然选择，以及人类社会在进入文明时代后的巨变所带来的“生活方式和身体运作机制的不匹配”是非常有意思的话题，以后有机会我会好好讲讲这个的。</p>
+<p>作者：kmlover<br>
+链接：<a href="https://www.zhihu.com/question/58433345/answer/157493080" target="_blank" rel="noopener">https://www.zhihu.com/question/58433345/answer/157493080</a><br>
+来源：知乎<br>
+著作权归作者所有，转载请联系作者获得授权。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2017/10/10/知识搬运工/20171010白起坑杀 40 万降卒和南京屠杀 30 万人口有哪些异同？/">白起坑杀 40 万降卒和南京屠杀 30 万人口有哪些异同？</a>
+            
+            
+            <a class="next" rel="next" href="/2017/10/10/知识搬运工/20171010为什么中国的航班不允许乘客使用开着飞行模式的手机？/">为什么中国的航班不允许乘客使用开着飞行模式的手机？</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

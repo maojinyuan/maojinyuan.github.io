@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>什么是「供给侧改革」？ | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">什么是「供给侧改革」？</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2018/09/06&nbsp;&nbsp;20:20</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/知识搬运工/">知识搬运工</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>​老王本来是个卖西瓜的，后来城里每家人都买了他的西瓜，市场饱和，需求不足，他想扩大经营规模，挣更多的钱，已经不可能了。老王有一天突然豁然开朗，再围绕卖西瓜做文章，是不可能挣更多的钱的，思路得从怎么卖更多的西瓜，转向卖什么比卖西瓜更赚钱上面去。这叫供给侧改革。</p>
+<p>老王瞅了瞅，发现扫帚比较好卖，马上关闭了西瓜厂，投资建了一家扫帚厂，开始生产扫帚。从产西瓜，转型为生产扫帚，这个叫做结构调整。</p>
+<p>很快，大批的扫帚生产出来了，大获成功，老王又挣了很多钱。大家看老王卖扫帚这么挣钱，都纷纷加入扫帚行业，世面上竞争对手一下子多了起来。老王渐渐发现，卖扫帚的利润越来越低了。怎么办呢，老王灵机一动，决定发明一项黑科技来打击他的竞争对手，他把扫帚升级成了吸尘器。老王的吸尘器，大受欢迎，他又赚了很多钱。从生产扫帚到生产吸尘器，这个叫创新驱动。</p>
+<p>老王发现，很少有农村人买他的吸尘器。他感到很奇怪，便到农村调研，发现农村人都不铺木地板，所以吸尘器根本没有市场。怎么才能让农村人购买老王生产的吸尘器呢，老王陷入了沉思。老王认为，要让农村人能买他的吸尘器，就得先把他们变成城里人，这个构想，就是小城镇建设。</p>
+<p>给农村人建好了小城镇，发现吸尘器在这个几亿农村人口的大市场里还是销售不畅。老王又去调研，发现他们虽然居住环境改变了，但是他们的消费结构依然还是没有改变，因为他们购买力有限，不舍得买几千块的高级吸尘器，平时买个十块钱一把的扫帚对付下就行了。</p>
+<p>问题的症结找到了，想要让这几亿人都买他的吸尘器，那么就得想办法让这些人的购买力增加才行。怎么才能让农村人变有钱呢，让农村人变得和城里人一样有钱，这个理念，叫共同富裕，全面建设小康社会。</p>
+<p>光有理念还不行，还得落地变成现实才行。怎么才能让农村人变得和城里人一样富裕呢，靠农业现代化。三农问题的解决，在于农村的消失，农民的消失，原始农业的消失。看来人口的大聚居，才是大势所趋，小城镇建设那一套，可能行不通了。这需要一套整体解决方案，这套方案，就是农业3.0。</p>
+<p>农业现代化解决了，几亿农村人口被从土地上解放出来，开始全面城市化，现有的城市硬件建设，远不足以满足新进城的农民的居住和生产生活需求，怎么办呢，这时候要解决这个问题，就需要对中国进行全面的城市化建设。这个概念，叫做三纵两横，多中心城市。</p>
+<p>沿海的一部分先富起来的人民，发现内地城市化程度越来越高，人口和土地，资本和技术，都齐备了，那么他们就可以把生产的活，转移给这些没活干的地区，它们专门负责设计，创意和服务。这个叫做，产业转移，沿江经济带承接区。</p>
+<p>老王的吸尘器生意越来越好，但是有一个问题一直在困扰他。他为了卖吸尘器，在每个城市每个街道和小区和商场，都得租一个店铺，成本压力太大，严重的侵蚀了老王吸尘器生意的利润。老王觉得把实体店关掉，把销售从线下搬到了线上，这样成本的大幅度消减，让老王又多赚了很多钱。这个叫互联网+。</p>
+<p>隔壁卖肉夹馍的老李，看老王从一个卖西瓜的，到转型为卖吸尘器的，生意做的这么成功，也深受启发，也开始了生意转型，这个现象，叫大众创业，万众创新。老王需要转型，老李需要转型，那么推而广之，是不是各行各业，都需要这样的转型呢。答案是肯定的。那么要对各行各业，都进行这样的升级和转型，对于整个国民经济来说，就需要一次顶层设计。</p>
+<p>经过顶层设计之后，整个国民经济的操作系统，都需要升级换代，迭代后的版本，就叫经济新版本。</p>
+<p>虽然生意越来越好了，但是老李还是开心不起来。有一件事，让他发愁，那就是库存问题。世界上存在一种，可以一劳永逸的永远消除库存的生产方式吗。如果打通销售和生产的壁垒，让他们连成一张网，让生产和销售实时互动，消除信息孤岛，让制造全面信息化，那就可以永远的消除库存。这个构想和规划，叫做中国制造2025。德国人把这个工业互联网叫做工业4.0。</p>
+<p>吸尘器的库存问题，终于解决了。那么推而广之，有没有可能，让国民经济的每一个环节，都不产生库存和过剩呢，答案是有的。把所有的人，产品，流程，事物，都连接起来，这样就可以永远的消除库存和生产过剩，永远的消除经济危机。这个构想，叫做万物互联。</p>
+<p>现在老王手里有了三张网，互联网，工业互联网，万物互联网。整个国民经济日新月异，万象更新，一日千里。但还是有一件事，让老王心理不痛快，那就是以前他开西瓜厂，积压下来的库存和技术储备，都闲置浪费了。老王放眼一看，发现很多国家还在吃草，穷的吃不起西瓜。老王打算把西瓜厂的技术，设备，产能，库存，都输出到这些国家去，让们也尝尝西瓜的滋味，这个计划叫一路一带。</p>
+<p>那些吃草国的酋长说，开西瓜厂，对发展我们的经济的确是个好事，但问题是我们没有钱投资开办一座西瓜厂。老王说，没关系，不要为钱的事发愁，我借钱给你。为了借钱给这些吃草国，老王建立了一个专门的银行，叫亚投行。</p>
+<p>吃草国学会了生产西瓜之后，开始变得有钱了，老王的吸尘器，也就可以倾销到这些吃草国了。把吸尘器卖到其他国家，这属于国际贸易，一个吸尘器值多少钱，用什么计价呢，因为中国是吸尘器生产第一大国，所以必须得用人民币来计价。结算用什么货币呢，双方秉承着尊重平等，睦邻友好，团结合作的原则，经过愉快的协商，一致同意，使用人民币进行贸易结算。</p>
+<p>人民币成了计价货币，结算货币之后，这些国家为了发展和中国的贸易，就得储备更多的人民币，这样以来，人民币就成了储备货币。从计价货币，到结算货币，再到储备货币，这个货币输出过程，叫做人民币国际化。</p>
+<p>人民币国际化，大获成功，这抢了小美帝美元的大生意。一条街上，显然不可能同时容下两个收保护费的组织。美国拎着砍刀就来约架了，中国抱着胳膊冷冷一笑，这年头打架打的都是钱，你砍刀倒是挺不错，问题是你有钱吗？小美帝听闻此话，顿时嚎啕大哭，刀是最炫酷的刀，可是没钱打架谁都不敢砍啊。小美帝悲痛欲绝的滚回家了。失去了保护费这块收入，小美帝回家后，不久便一病不起，一命呜呼。</p>
+<p>小美帝死后，中国开始了一个全球化新时代，万邦来朝，四夷威服，普天之下莫非王土，率土之滨莫非王臣。人民币成了国际通用货币，汉语成了国际通用语言，孔子学院，取代了蛮夷们的教堂和寺庙。世界终于实现了天下大同，车同轨，书同文，人同伦。战争，永久的消失了，人类终于实现了永久和平的梦想和希望。中国人都过上了好日子，中华民族完成了伟大的民族复兴。这个构想，叫做中国梦。</p>
+<p>强大起来的中国承诺，中国永远不称霸，因为中国要称的是王，以王道莅天下。以道莅天下，其鬼不神；非其鬼不神，其神不伤人；非其神不伤人，圣人亦不伤人。夫两不相伤，故德交归焉。霸道害而不生，王道生而不害，在王道的沐浴下，人类终于过上了永久太平和幸福的生活。</p>
+<p>作者：伯阳<br>
+链接：<a href="https://www.zhihu.com/question/37671011/answer/91983037" target="_blank" rel="noopener">https://www.zhihu.com/question/37671011/answer/91983037</a><br>
+来源：知乎<br>
+著作权归作者所有，转载请联系作者获得授权。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2018/09/06/知识搬运工/20180906人是怎么废掉的？/">人是怎么废掉的？</a>
+            
+            
+            <a class="next" rel="next" href="/2018/09/06/知识搬运工/20180906什么样的男人不容易出轨？/">什么样的男人不容易出轨？</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>
