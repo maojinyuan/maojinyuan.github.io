@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>《海边理发师》 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">《海边理发师》</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2021/09/10&nbsp;&nbsp;19:27</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h3 id="一">一</h3>
+<p>那家理发店位于海边的一个小镇。映入眼帘的是一座过时的西式小屋。没有鲜花的院子里，立着一架被人遗忘的秋千，支架和锁链上都布满了红色的锈迹。店主早在我到达前就站在那里了。他的头发剃得很短，明显有不少白发，却没有染。</p>
+<p>我刚在椅子上坐好，他就给我套上白色的罩衣。他问：“路还好找吧？”我點了点头。</p>
+<p>我有多久没有去理发店剪过头发了？高中毕业后，我想把发型弄得时髦些，于是不知不觉养成了去美发厅的习惯。</p>
+<p>“您想剪成什么样呢？像您这样的年轻人，平时应该很少进理发店吧？您特意选择这家乡下理发店，是不是有什么特别的用意啊？对不起，我不该瞎打听的。有什么要求您尽管提就是了。”</p>
+<p>“照现在的样子，剪短一些就行。”——这句说惯了的话差点脱口而出。可是闻着那生发水的味道，我改变了主意。来一趟有名的店不容易，于是我鼓起勇气问：“您觉得我适合什么样的发型？”话音刚落，店主的眼角就浮现出笑纹：“当理发师的都盼着听到这句话。可这事还真不能我一个人说了算，我还是会跟您商量。您是做什么工作的？我一直觉得，男士应该根据自己的工作性质选择相应的发型。平面设计师？啊，我懂了，就是设计书本、杂志之类的，对吧？”</p>
+<p>店主小心翼翼地把我的脑袋摸了一遍，他的动作如此轻柔，应该是在检查我的发质和头骨的轮廓。我的发旋长在一个特别奇怪的地方。一摸到它，店主的手就停住了。他会对我说什么呢？我有些紧张。谁知从那薄得仿佛一条皱纹的嘴唇间吐出的话，仅仅是关于新发型的几个选项与提议。不等我开口回答，店主就“咔嚓”一声，动了一下不知何时拿在手上的剪刀。</p>
+<h3 id="二">二</h3>
+<p>我的眼前是一面硕大的镜子。身后窗外的大海，就这样一览无余地映在镜中。秋日午后水蓝色的天空、深蓝色的大海，两种蓝色各占据半面镜子。</p>
+<p>“工作忙吗，自由设计师？您还这么年轻，就已经自立门户了？了不起。哎呀，我都为您高兴。毕竟我自己也做了这么多年，特别有共鸣。</p>
+<p>“我们家从我祖父那代开始经营理发店，我算是第三代传人。我家的理发店在当地也算老字号了，其实当时店里有其他理发师，还有徒弟，根本不缺人手。我当时特别不理解，父亲为什么非得让我干这个呢？”</p>
+<p>店主把手指搭在我头上，让我把头仰起来。</p>
+<p>“年轻人听我说这些一定感觉很无聊吧？像我这样的老头子也只能说说陈年旧事了。不过父亲当年教导我，锻炼口才也是理发师的必修课。可惜，我们家的店在昭和二十年（1945年）的那场大空袭中被毁了。”</p>
+<p>店主后退半步，把老花镜推到额头上，开始前后左右地打量我。</p>
+<p>“其实，我原来是想当个画家的。上学的时候，我成绩最好的那门课是美术。战争结束后第三年，我父亲搭了个棚屋，重新开起理发店，可我当时根本没有回家帮忙的打算。但是我漏掉了一个最重要的信息，只有旧制中学的毕业生才有资格报考那所美术学校。”</p>
+<p>店主看着我映在镜中的脸说：“我跟着替人画招牌的画师做了一阵子学徒，还画了一些作品给美术展投稿，却一无所获。最后，我还是回家了，求父亲再给我一次机会。于是，我又干起了在理发店扫地的差事。那一年，我十八岁。”</p>
+<p>我的头发短了很多，额头的刘海不见了，总是被挡住大半的耳朵也露了出来。镜中的我和平时判若两人。哦，原来我长这样啊……店主把剪刀换成剃刀，反复削着我的发梢。</p>
+<p>“二十出头时，我就成了一家店的顶梁柱。父亲去世后，客人明显比原来少了很多。打那以后，我就开始玩儿命练本事。昭和三十年（1955年）以后，店里的生意才慢慢好起来。生意好转的原因其实很简单，就是‘慎太郎头。我成了我们那一带最擅长剪慎太郎头的理发师。我们家应该也是那一带头一家买电视机的。我就是在买电视机那年成家的。老婆是我的远房亲戚，来自秋田，原本是在店里打杂的，文文静静的一个人，勤快得很。”</p>
+<p>我紧张地等待店主给我刮胡子，没想到他只剃了发际，就往我身上多套了一层塑料罩衣，说道：“先给您洗头吧。这边请。”冲洗了好久，店主才往我的头上倒了一圈洗发水。与其说是洗头，不如说是按摩头皮。</p>
+<p>“理发店的生意，是从昭和四十年初，那群人到日本来访以后开始走下坡路的。一些机灵的理发师开始给客人烫头发，可惜我周围的同行太乐观了。他们觉得玩小乐队的都不是什么正经人，这些人掀起的潮流绝对长久不了。后来，就有了‘嬉皮士和‘疯癫族。留着乞丐发型的年轻人开始频频出现在街头巷尾，传统的理发店一家接一家地倒闭。三十一岁那年，我在理发大赛上拿了个小奖。可这种奖啊，真是一点用都没有。眼看着店里的生意越来越差，两个雇员的工资都快开不出来了。但我打定了主意，要是真走到不得不辞退员工那一步，就把店关掉。倒不是因为我特别疼惜员工，而是我们家有三把理发椅，我又是第三代传人，这口气还是要争的。工作不顺心的时候，私生活也会出问题。我这人特别爱喝酒，酒品还不好，一喝醉就控制不住自己。渐渐地，我开始打老婆。一天，我参加完商店协会的联欢旅行后，回家一看——老婆没影了，她的衣服和东西也都不见了。过了一阵子，她寄来了离婚协议书。</p>
+<p>“啊，您感到哪里痒吗？”店主用手掌揉搓着我满是泡沫的头两侧，又用蜷曲的手指揉捏我的头顶。冲第三遍，上护发素，然后又是漫长的冲洗。我回到之前的那把理发椅上，他先用毛巾擦我的头发，再拿吹风机吹。</p>
+<p>“有一天，店里来了一位头发长得吓人的男青年。他穿着一件印着佛祖的T恤衫，下身是喇叭牛仔裤，长发及腰。他对我说：‘帮我剪成三七开的短发吧。我生怕他中途改变主意，连忙先给他‘咔嚓一剪刀，然后才问：‘为什么要剪头发啊？他说：‘跟我同居的姑娘怀孕了，我再玩音乐就没法养活她了，所以我要去找一份正经工作。我在给他剪头发时，他在理发椅上掉眼泪。</p>
+<p>“经过这件事，我下定决心，要让理发店改头换面。青年走后，我就把自己的慎太郎头剃了。打那时起，我的头就一直是您现在看到的样子。我一咬牙一跺脚，举债装修了店面。我还去学了按摩，从基础学起。当时美容院正好进日本，全国上下加起来没几家。我将洗发水、生发水什么的也全换成了原来不舍得用的高档产品。不过，价格也相应提高了一些。没想到这一搏还真赢了。当然，要是没有他，我家的理发店怕是火不了几天，是他让这家店真正兴旺起来。他是一位大明星。大明星特别满意我给他做的发型。有一次，他在接受媒体采访的时候透露了我家理发店的店名。报道一出，理发店的生意一天比一天好，简直跟做梦一样。我就是在那时开始采用预约制，不让大家到店里排队了。”</p>
+<h3 id="三">三</h3>
+<p>我从来没在店里做过按摩，多少有些不自在。毕竟给我按摩的人都一把年纪了，他显然比我更需要按摩。然而，店主就是不停手，一会儿给我按上臂，一会儿又按前臂……连手心都按了。</p>
+<p>“您还这么年轻，肌肉关节却很僵硬。肌肉酸痛就是努力工作的证明，多了不起啊。我说到哪儿了？啊……想起来了。从那时候开始，就有很多名人来我家剪头发。于是周围的人开始吹捧我，越是这种时候，就越应该谦虚谨慎，可我把这些话当真了。四十八岁那年，我在银座开了分店。说得好听点，那是我有事业心，可我真正想做的不过是往脸上贴金罢了。我把父亲传下来的总店交给我的得力干将负责，自己则去银座分店坐镇指挥。现在想想，我当时没有看清理想和现实的差距啊。先生，您要是有把业务做大的打算，可一定不能大意。公司做得再大，也别把公司守则挂在墙上，挂上‘初心才对。哦，您准备一个人做下去？也许这才是最明智的选择。”</p>
+<p>店主取下毛巾，在我的脸颊上涂抹温热的肥皂水。</p>
+<p>“分店开张的第二年，我又娶了老婆。老婆能干得很。她明明比我小一轮，我却总挨她的训。我跟前妻没有生育，五十多岁才有了第一个孩子，含在嘴里怕化了，捧在手里怕摔了。如果人生真的有巅峰和低谷之分，孩子出世的那一刻就是我人生的巅峰。可惜好日子啊，总是不长久。也许正是因为这样，才更显得珍贵。您看我现在这副样子，应该就能猜个八九不离十了。没错，在银座开分店并不是明智之举。眼看着分店的生意越来越差，我又开始借酒浇愁。这个老婆和上一个不一样。我没打她，却也不怎么回家了。我明明还爱着她，却在外面找了别的女人，只因为不想听她唠叨。”</p>
+<p>开始剃须后，店主顿时安静了许多，也许是因为他正拿着刀吧。</p>
+<p>“我刚才还大言不惭地说，我见过形形色色的人，听过五花八门的故事，仿佛我的格局也在这个过程中得到了提升。可是，我其实一点长进都没有。那时的我，看什么都是隔着镜子的，因为正视现实会很痛苦。到头来，两家店都归了别人。其实，要是咬牙放弃银座的分店，总店应该还可以开下去……可惜，出了点事。实话告诉您吧，我杀过一个人。那是二十六年前的事情了。帮我打理总店的人突然请辞，说要自立门户。这么多年来，他一直是我的左膀右臂。当时他也四十多岁了，有自己的家，我也料到他总有一天是要走的。我原打算让他用我家的店名开店。听说他要走，我气得火冒三丈。他还要带走一个员工，甚至要求我分一部分顾客给他。这些要求令我气到极点。打烊之后，我们在总店吵了起来。我顺手抄起一旁的发钳，打在他的头上。最要命的是，偏偏那是一把又大又重的老式发钳。起初，他还是清醒的，我叫来救护车，一路上不停地跟他说：‘对不起，对不起……后来，我就被警察带走了。两天后，警察在审讯室里告诉我，他死了。我在服刑期间跟老婆办了离婚手续。她原本不同意离婚，但我的态度非常坚决，好说歹说才劝动了她。我不忍心让她变成杀人犯的老婆，也不忍心让我们的孩子变成杀人犯的孩子。自那以后，我再也没联系过她。”</p>
+<p>不知不觉，胡子剃好了，店主又去里屋取新的药水和工具。椅背还没扶起来。</p>
+<p>“服刑期间，我成了卫生专员兼理发专员。专业理发师进监狱可不是常有的事，所以我很受重用。”</p>
+<p>最后一个环节是脸部按摩。店主的手指拂过我的眼眶，在眼皮、眼梢、眼袋、眼角上画着圈，一遍又一遍。</p>
+<p>“我本不打算再当理发师，但出狱后没多久，我便意识到，坐过牢的人真的很难找到工作。于是我开始去养老院给老人理发。后来，我就把东京的房子卖了，买下这栋房子，把它装修成了理发店。我根本不在乎店的地段，只是因为我喜欢看海，就选在了海边。渐渐地，一些本地人听说我是理发师，开始时不时光顾。直到那时，我才在公交车道边立了个灯柱。我为什么这么在意店里的镜子呢？让客人看到美丽的海景，这是借口。这面镜子啊，其实是为我自己装的。理发师的工作几乎都是站在大镜子前完成的。理发师的一举一动，客人都会看在眼里。可这偏偏是我最不能忍受的。于是我想，要是客人能一直看着大海，就不会注意到我的脸了吧。我唯恐哪一天有人指着我说：‘你是杀人犯。”</p>
+<h3 id="四">四</h3>
+<p>“这家店开张的第三年，那位大明星来了，他说正巧在附近拍电影。我感动得一句话都说不出来，只能不停地给他鞠躬。因为我知道，他有好几年没拍过电影了。来找我之前，他刚演了一部电视剧的配角。为了那个角色，他把头发留长了一些。他让我‘剪成老样子。我剪得可卖力了。他的头发稀疏了不少，弹性也大不如前，所以我剪得格外仔细。打那以后，他开始频频光顾这家店。在他去世前半个月，他叫我去一趟他住的医院。那是他这辈子最后一次理发。他的语气跟平时一样彬彬有礼。我还记得他最后是这么对我说的：‘谢谢你。多亏了你，我才能有今天。我是个罪孽深重的人，却有人这么感激我。光是這句话，就让我觉得这辈子没白活。</p>
+<p>“您的发旋长在一个很特殊的位置。嗯，每个人的发旋都不一样。我天天跟头发打交道，差别再细微也能一眼瞧出来。您是不是觉得我是个特别啰唆的老头子？我也不是天天都这样。我还是头一回跟客人聊这么多呢。有些事啊，还是得跟您说一说，毕竟我也没几年好活了。”</p>
+<p>这时，店主突然说道：“您后脑勺那个缝过针的伤口，是小时候摔的吧？”</p>
+<p>我不禁望向镜中的他。因为逆光的关系，他的脸变成了一团黑影，我看不清他的表情。</p>
+<p>“那个伤口，是摔下秋千的时候磕破的吧？那秋千就在河滩的公园里，周围的地上都是石头，能不磕破皮吗。我实在不放心让儿子在那么危险的地方玩，干脆买了架秋千，装在自家的院子里。老婆还笑我太宠孩子呢。</p>
+<p>“这栋房子的院子里不是有一架破秋千吗？那是我从东京的家里搬来的，不是原来就有的。”</p>
+<p>店主问：“令堂还健在吗？”我回答：“嗯。”店主沉默了。但我大声打破了只有吹风机响声的寂静，说：“我下周要办婚礼了。”然后，我才简明扼要地道明来意。婚期将至，我想在举行婚礼前去理发店好好剪一次头发，而不是像平时那样去美发厅随便弄弄。我只跟他说了这些，绝口不谈母亲是多么不愿意提起他，以至于我只能到处打听，费了好大的劲才找到这家店。店主的脸在逆光中漆黑一片。他开口对我说：“恭喜您了！”我回答：“谢谢！”本想再说点什么，可剩下的话到头来还是咽了回去。店主完成了全套流程，解开罩衣的搭扣。他不肯收钱。我硬是把钱塞给他，怀着合上老相簿的心境，伸手握住门把手。店主的声音从身后传来：“请问……能让我再看一看您的脸吗？不不，我就是怕额发没理好。”</p>
+<p>(文章摘自读者，作者：荻原浩)</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2021/09/10/觉得好就收录了/20210910《苔香满衣》/">《苔香满衣》</a>
+            
+            
+            <a class="next" rel="next" href="/2021/08/16/20210816DropBox标准图片引用格式/">DropBox标准图片引用格式</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>

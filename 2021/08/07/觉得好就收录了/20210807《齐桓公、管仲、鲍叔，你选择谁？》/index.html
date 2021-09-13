@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="description" content="It's my apperception of the world!">
+
+
+
+<title>《齐桓公、管仲、鲍叔，你选择谁？》 | Writing the future</title>
+
+
+
+    <link rel="icon" href="/favicon.svg">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+    <script src="/js/jquery-3.5.0.min.js"></script>
+    
+
+
+
+
+
+
+
+    <script>
+    function searchToggle() {
+        const width = $(document.body).width()
+        if(width > 479) {
+            return;
+        }
+        const search = $('.search');
+        const searchForm = $('.form-search')
+
+        if(!search.hasClass("mobile-search")) {
+            search.addClass("mobile-search");
+        } else {
+            search.removeClass("mobile-search");
+        } 
+    }
+
+    function search(searchInputEl, formEl, flag) {
+        const path = "/" + "search.json"; // 可以在public 下查看这个search.json
+        $(formEl).submit(function(e){
+            e.preventDefault();
+            let target = null
+            if(searchInputEl == null) {
+                const screenWidth = $(document.body).width();
+                target = screenWidth > 479 ? $('#pc-search-input') : $('#mobile-search-input');
+                console.log(target);
+            } else {
+                target = $(searchInputEl)
+            }
+
+            if(!flag && target.val() === '') {
+                return ;
+            }
+
+            $("#u-search").fadeIn(500, function() {
+                $("body > .wrapper").addClass("modal-active");
+
+                $.ajax({
+                    url: path,
+                    dataType: "json",
+                    beforeSend: function (xhr) {
+                        $input = target.val();
+                        $(".form-input").val($input);
+                        const loadingBar = $('.search-loading-bar') 
+                        loadingBar.css({
+                            width:'100%',
+                            display: 'block'
+                        });
+                    },
+                    success: function( datas ) {
+                        console.log(datas);
+                        const $resultPanel = $(".modal-body")[0];
+                        let str = `<ul class="modal-results">`;
+                        var keywords = $(".form-input").val().trim().toLowerCase().split(/[\s\-]+/);
+                        $resultPanel.innerHTML = "";
+                        let hasResult = false
+                        let text = `<div class="no-result">找不到与关键词相关的内容....</div>`;
+
+                        if ($(".form-input").val().trim().length <= 0) {
+                            // 没有结果
+                            $resultPanel.innerHTML = text;
+                            return;
+                        }
+                        datas.forEach(function (data, index) {
+                            var isMatch = true;
+                            if (!data.title || data.title.trim() === '') {
+                                data.title = "Untitled";
+                            }
+                            var data_title = data.title.trim().toLowerCase();
+                            var data_content = data.content && data.content.trim().replace(/<[^>]+>/g, "").toLowerCase() || '';
+                            var data_url = data.url;
+                            var index_title = -1;
+                            var index_content = -1;
+                            var first_occur = -1;
+                            // only match artiles with not empty contents
+                            if (data_content !== '') {
+                                keywords.forEach(function (keyword, i) {
+                                    index_title = data_title.indexOf(keyword);
+                                    index_content = data_content.indexOf(keyword);
+
+                                    if (index_title < 0 && index_content < 0) {
+                                        isMatch = false;
+                                    } else {
+                                        hasResult = true
+                                        if (index_content < 0) {
+                                            index_content = 0;
+                                        }
+                                        if (i == 0) {
+                                            first_occur = index_content;
+                                        }
+                                    }
+                                });
+                            } else {
+                                isMatch = false;
+                            }
+                            // show search results
+                            if (isMatch) {
+                                str += `<li class='result-item'><a href='${data_url}' class='result-item-detail'> <span class="title">${data_title}</span>`;
+                                var content = data.content.trim().replace(/<[^>]+>/g, "");
+                                if (first_occur >= 0) {
+                                    // cut out 200 characters
+                                    var start = first_occur - 40;
+                                    var end = first_occur + 160;
+
+                                    if (start < 0) {
+                                        start = 0;
+                                    }
+
+                                    if (start == 0) {
+                                        end = 200;
+                                    }
+
+                                    if (end > content.length) {
+                                        end = content.length;
+                                    }
+
+                                    var match_content = content.substring(start, end);
+
+                                    // highlight all keywords
+                                    keywords.forEach(function (keyword) {
+                                        var regS = new RegExp(keyword, "gi");
+                                        match_content = match_content.replace(regS, `<em class="search-keyword">${keyword}</em>`);
+                                    });
+
+                                    str += `<span class="content"> ${match_content} ...</span></a>`;
+                                }
+                                str += "</li>";
+                            }
+                        });
+                        str += "</ul>";
+                        if(hasResult) {
+                            $resultPanel.innerHTML = str;
+                        } else {
+                            $resultPanel.innerHTML = text;
+                        }
+
+                    },
+                    complete: function() {
+                        setTimeout(() => {
+                                const loadingBar = $('.search-loading-bar') 
+                                loadingBar.css({
+                                    width:'0%',
+                                    display: 'none'
+                                });
+                        }, 300)
+                    }
+                });
+            })
+
+        });
+    }
+
+    $(document).ready(function() {
+        $('.modal-close').click(function () { 
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+
+        $('.modal-overlay').click(function() {
+            $("#u-search").fadeOut();
+            $("body > .wrapper").removeClass("modal-active")
+        })
+        search(null, ".form-search", false)
+        search("#u-search-modal-form .form-input", ".u-search-modal-form", true)
+    })
+</script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Jackie&#39;s blog</a></div>
+            <div class="menu navbar-right">
+                <!-- 这里表示的是pc端搜索框 -->
+                
+                
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="pc-search-input">
+        </form>
+    </div>
+
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Jackie&#39;s blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="navbar-mobile-right">
+                    
+                    
+    <div class="search ">
+        <div class="search-btn" onclick="searchToggle()">
+            <img src="/image/search.png" class="search-btn-img">
+        </div>
+        <form class="form-search">
+            <input class="input" placeholder="Searching" autocomplete="off" id="mobile-search-input">
+        </form>
+    </div>
+
+                    <div class="menu-toggle" onclick="mobileBtn()">&#9776; 目录</div>
+                </div>
+                
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">《齐桓公、管仲、鲍叔，你选择谁？》</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Jackie</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">2021/08/07&nbsp;&nbsp;21:58</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/觉得好就收录了/">觉得好就收录了</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p><strong>记：</strong><br>
+1.岁数大了，记性都不好了，关于齐桓公、管仲、鲍叔这三个人的故事，其实很小的时候在一本《上下五千年》就读过了，尽管那是一本盗版的书，很多字都有残缺或者漏印，但不失给那时的我拓宽了知识面，然而并没有什么卵用，该忘的还得忘。我现在都已经忘却得差不多了，作为2020年高考全国I卷的作文题，我在想以我现在的水平来写这个高考作文，估计只能想到友谊了！<br>
+2.这个文章让我重新认识一个词：管鲍之交。</p>
+<p><strong>正文：</strong><br>
+2020年高考全国I卷的作文题，是请考生从齐桓公、管仲、鲍叔三个人的故事出发写作文。三位历史人物瞬间成为热点话题。</p>
+<p>这段故事发生在2700年前，大背景是周王朝最初的“家天下”模式已经与诸侯血缘渐远的现实无法匹配，周天子收到的供奉越来越少，诸侯国间的战争越来越多，而蜜罐里泡大的周王根本没有能力解决这些问题。</p>
+<p>大厦将倾，如之奈何？历史开出的药方是成立诸侯联盟，由盟主来主导天下事务。盟主就是霸主，那时的“霸”字通“伯”，是褒义词。齐桓公经管仲和鲍叔牙辅佐成为春秋首霸，所承担的就是这份历史责任。</p>
+<p>齐国政坛“铁三角”<br>
+当时华夏诸侯众多，大国还有鲁、宋、卫、郑等，齐国又不在中原，为何历史的重任会落在齐桓公肩上呢？</p>
+<p>其一，齐桓公的祖上姜子牙是周文王的军师、周武王的岳父、周成王的外祖父，也是齐国的开国国君。这段历史渊源无疑是齐国担任盟主的利好条件。更何况齐国在姜子牙的治理下迅速崛起，虽然其后国运也有起伏，但是到齐桓公这一辈，实力仍然相当雄厚。</p>
+<p>其二，称霸当然需要雄主，而齐桓公恰好具备潜质。“无小智，惕而有大虑”，他不耍小心眼儿，头脑警醒，有大格局、大思路，能站在更高的层面看问题，为霸业放下个人恩怨，接纳差点射死自己的管仲。</p>
+<p>不过，齐桓公也有一身毛病——贪恋酒色、任性张扬、刚愎自用、简单粗暴。他在继位的最初几年，因迷信武力，穷兵黩武，差点把齐国霸业彻底毁掉。所以，称霸这件事儿不能光靠齐桓公，还需要有高人辅佐。</p>
+<p>管仲，按照《史记》中的说法是周文王的后裔。虽然管仲出生时已经家道中落，但历史最终给了他施展才华的舞台。在文王和太公合作400年后，他们的后代再一次联手。</p>
+<p>管仲冷静、理性，这些特质齐桓公当然能接受;但管仲经常给齐桓公泼冷水，这就难免会影响国君的情绪。更麻烦的是，管仲最初辅佐的是齐桓公的二哥公子纠，这就让管仲和齐桓公（当时的公子小白）直接成为政敌。</p>
+<p>虽然共同的事业是他们合作的基础，但要让“性情中人”齐桓公和高冷的管仲真正走到一起，还需要一位关键人物——鲍叔。</p>
+<p>鲍叔即鲍叔牙，由于史料的缺乏，他的出身至今还是个谜。至于他什么时候与管仲结交，也没有明确记载，但有一点可以确定，他们的友情堪称千古佳话。</p>
+<p>管仲曾用自嘲的口吻赞美鲍叔牙。他说自己年轻时生活潦倒，与鲍叔牙一起做生意，常给自己多分一些钱;给鲍叔牙出主意，却让经营陷入困境;他上战场打仗畏首畏尾，到官府当差又被赶了出来，最严重的是公子纠被杀之后，他“幽囚受辱”，因投奔政敌齐桓公而背上巨大的骂名……然而种种不堪，鲍叔牙都给予充分理解，不但没有小看管仲，反而在齐桓公面前大力推荐，并甘居其后。为此，管仲叹息了一聲：“生我者父母，知我者鲍子也。”</p>
+<p>这段故事最终演变成一个成语：<strong>管鲍之交</strong>。汉语当中形容哥俩好的成语有很多，比如生死之交、莫逆之交，但管鲍之交还有另外一层意思，就是当一个人羽翼未丰、才华没能得到施展的时候，就有人理解、欣赏和支持，这样的友情才够得上管鲍之交。</p>
+<p>从史料上看，在管仲接任国相之后，鲍叔牙并没有什么具体而显赫的贡献。但他身为国君的老师、国相的义兄，所发挥的作用是不可或缺的。每当那两个人出现意见分歧甚至情绪对立，都需要鲍叔牙居中调和。可以说，是鲍叔牙拉起了齐国政坛的“铁三角”。</p>
+<p>“仁德之人”与“罪人”<br>
+因为有了“铁三角”，齐国进入了发展的快车道。国力增强，自然可以承担更多的“国际”义务，称霸就成了顺理成章的事情。</p>
+<p>《论语》记载，有人问孔子怎样看待管仲，孔子评价，“仁德之人”。管仲没收了伯氏骈邑的家产，伯氏只能过粗茶淡饭的日子，却直到终老也无怨言。管仲公正执法，并让伯氏认识到错误，是德法兼治的体现，所以是仁德之人。</p>
+<p>学生子路却提出不同意见，认为齐桓公杀了公子纠，同事召忽自杀以殉，管仲却不自杀，怎么能算仁德之人呢？孔子则说，因为管仲，大家不再兵戎相见，这就是他的仁德。</p>
+<p>另一个学生子贡的问题更尖锐：管仲不殉死也就算了，还跑去给齐桓公做国相，这就不能算仁德了吧？孔子的回答异常精彩——管仲给齐桓公当国相，称霸诸侯，匡正天下，老百姓到今天还在享受着他创造的幸福局面，如果没有他，我们就会变成披头散发的野蛮人。</p>
+<p>综合起来，孔子的两段话讲了三层意思：管仲维护了华夏秩序，抗击了外敌侵略，为百姓创造了幸福。可见在孔子心中，齐国的霸业主要归功于管仲。</p>
+<p>到了宋代，文学家苏洵、苏轼、苏辙父子三人都写过同名文章《管仲论》。苏洵说：齐国的昌盛，不应归功于管仲，而要归功于鲍叔牙;齐国的危局也不能归罪于那几个小人，而是要归罪于管仲。为什么呢？因为鲍叔牙推荐了管仲，而管仲最后并没有推荐谁来接任国相。</p>
+<p>苏洵的这种逻辑，也有很多人发出过赞叹。但是，如果再把苏轼和苏辙二人的《管仲论》读完，就会发现苏轼全是赞扬，苏洵全是否定，而苏辙比较折中。苏洵的《管仲论》更接近游戏之作，是专门跟儿子们唱反调，用来激发他们的写作创意，所以那未必是他的真实想法。</p>
+<p>相比之下，司马迁在《史记》中记载“管仲卒，齐国遵其政，常强于诸侯”，则显得更为客观通透。管仲留下了一套强大的国政系统，后来六位公子彼此残杀30多年，齐国仍能保持强国地位，这就是其宝贵遗产。</p>
+<p>喜欢鲍叔牙的几乎是所有人<br>
+司马迁在肯定管仲的同时，还描述了一种状况，“天下不多管仲之贤，而多鲍叔能知人也”。按理说，鲍叔牙支持小白夺位是篡权行为，但奇怪的是后人并不理会这点瑕疵。这又是为什么呢？原因很简单，因为鲍叔牙的所作所为与更多人相关。调和君臣矛盾，帝王将相喜欢;举荐人才，甘居其后，读书人喜欢;重朋友、讲情谊，大家都喜欢。</p>
+<p>喜欢鲍叔牙无可非议，但如果简单认为鲍叔牙是君子而管仲是小人，那就是没有把书读明白。管仲本意是想通过自嘲来抬举朋友，但如果真的以为他很不堪，就大错特错。《史记·管晏列传》写管仲“少时常与鲍叔牙游，鲍叔知其贤”。两个人都是贤者，这才是他们结交的基础。</p>
+<p>辅佐齐桓公富国、称霸，本是鲍叔牙的职责，但这些事情后来主要由管仲完成;管仲想干出一番自己的事业，但同时也是在代鲍叔牙履行职责、实现愿望。兄弟一场，两个人最可贵的就是都在真心付出，而不计较得失，这是两位伟大前辈给后人的示范。</p>
+<p>(文章摘自读者，作者：李任飞)</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2021/08/16/20210816DropBox标准图片引用格式/">DropBox标准图片引用格式</a>
+            
+            
+            <a class="next" rel="next" href="/2021/07/01/觉得好就收录了/20210701一张有意思的图/">一张有意思的图</a>
+            
+        </section>
+
+        
+        <section id="comments" class="comments">
+          <style>
+            .comments{margin:60px;padding:0px;background:#fff}
+            @media screen and (max-width:800px){.comments{margin:auto;padding:10px;background:#fff}}
+          </style>
+          <div class="valine_comment"></div>
+<!--载入js，在</body>之前插入即可-->
+<!--Leancloud 操作库:-->
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<!--Valine 的核心代码库-->
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+      el: '.valine_comment',
+      app_id: '6amx8Uqv5ELdDmnxw7kOChnE-gzGzoHsz',
+      app_key: 'kpaHXXDMKzVlm4Ypzxza1h7C',
+      placeholder: '兄台勿走，留下你的芬芳之语...',
+      notify: 'false',
+      verify: 'false',
+    });
+</script>
+        </section>
+        
+        
+    </article>
+</div>
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Jackie | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_page_pv">View <span id="busuanzi_value_page_pv"></span> times</span>
+    </div>
+    <!-- Chic/layout.ejs -->
+    <div id="u-search">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="container">
+                    <form id="u-search-modal-form" class="u-search-modal-form">
+                        <button type="submit" class="form-submit-btn">
+                            <img src="/image/search.png" class="search-btn-img">
+                        </button>
+                        <input placeholder="搜索文章。。。" class="form-input" id="modal-form-input">
+                    </form>
+                    <a class="modal-close">x</a>
+                </div>
+                <div class="search-loading">
+                    <div class="search-loading-bar"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- ul 格式如下 -->
+                <!-- <ul class="modal-results">
+                    <li class="result-item">
+                        <a class="result-item-detail">
+                            <span class="title">页面配置</span>
+                            <span class="content">
+                                content
+                            </span>
+                        </a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+</body>
+</html>
