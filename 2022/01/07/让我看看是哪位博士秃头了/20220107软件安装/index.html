@@ -440,28 +440,59 @@
 <p>添加环境变量：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export PATH=path_to_your_location:$PATH</span><br></pre></td></tr></table></figure>
 <p>(添加完后可利用alias用法，将一个长串的名字alias成自己想要的短命令，e.g. alias gv=‘gview.exe’)</p>
-<h2 id="1-6-其它">1.6 其它</h2>
-<h5 id="1-6-1-把任务放到后台">1.6.1 把任务放到后台</h5>
+<h3 id="1-6-lammps安装">1.6 Lammps安装</h3>
+<p>conda环境依赖安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$conda config --add channels conda-forge</span><br><span class="line">$conda install lammps</span><br></pre></td></tr></table></figure>
+<p>手动安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">详见黄崇洋、宋子辰提供的文档</span><br></pre></td></tr></table></figure>
+<p><font color="red">此处感谢黄崇洋、宋子辰提供的文档！</font></p>
+<h3 id="1-7-hoomd-blue安装">1.7 HOOMD-blue安装</h3>
+<p>含三体势的HOOMD-blue2.x版本的安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$conda install -c conda-forge sphinx git openmpi numpy cmake</span><br><span class="line">$cd hoomd-blue</span><br><span class="line">$mkdir build</span><br><span class="line">$cd build</span><br><span class="line">$cmake ../ -DCMAKE_INSTALL_PREFIX=`python3 -c &quot;import site; print(site.getsitepackages()[0])&quot;`</span><br><span class="line">$cmake ../ -DCMAKE_INSTALL_PREFIX=`python3 -c &quot;import site; print(site.getsitepackages()[0])&quot;` -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=ON</span><br><span class="line">$make -j20</span><br><span class="line">$make install</span><br></pre></td></tr></table></figure>
+<p>(p.s. 1. -DCMAKE_INSTALL_PREFIX= 这里完全可以定义成你自己想装的路径)<br>
+(p.s. 2. 如果有地方导致安装失败，请记得进入build/目录，make clean一下，再删除build/下的所有文件)<br>
+(<font color="red">p.s. 3. 此处为HOOMD-blue安装的简化版，详见罗煜林提供的文档，非常感谢她提供的文档！</font>)<br>
+含三体势的HOOMD-blue3.x版本的安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conda install -c conda-forge hoomd</span><br></pre></td></tr></table></figure>
+<p>含三体势的HOOMD-blue3.x-beta安装:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$conda install -c conda-forge/label/hoomd_dev -c conda-forge hoomd</span><br></pre></td></tr></table></figure>
+<p>GPU版本的安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$conda install -c conda-forge hoomd=*=*gpu*</span><br></pre></td></tr></table></figure>
+<p>详见<a href="https://hoomd-blue.readthedocs.io/en/latest/installation.html" target="_blank" rel="noopener">HOOMD-blue</a></p>
+<h1>2 服务器一些常见使用</h1>
+<h3 id="2-0-请大家在拿到账号前-先安装好conda：">2.0 请大家在拿到账号前，先安装好conda：</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$sh Anaconda*.sh</span><br></pre></td></tr></table></figure>
+<h3 id="2-1-禁用conda">2.1 禁用conda</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$conda config --set auto_activate_base false</span><br></pre></td></tr></table></figure>
+<p>(打开只需要把false改成true就行了)</p>
+<h3 id="2-2-使用gpu注意事项">2.2 使用GPU注意事项</h3>
+<p>使用GPU干活的时候，请一定先提前用<strong>nvidia-smi</strong>命令看看哪块GPU是空闲的，当然你也可以简单的使用qwe或者gpu命令，但是请注意这两者是不同的，对于咱们课题组来说，运行的有galamost、hoomd、lammps或者其他需要GPU脚本，而qwe或者gpu命令只能识别galamost、hoomd脚本，不能识别lammps或者其他需要用到GPU的脚本，所以如果你想真正看到哪些GPU被占用了，请使用nvidia-smi命令。</p>
+<p>另外请大家多多检查自己的任务是否被正确kill掉，如果没有，请：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$kill+PID</span><br></pre></td></tr></table></figure>
+<p>这个的PID指的是你的任务号，用nvidia-smi命令即可看到。</p>
+<h3 id="2-3-设置galamost">2.3 设置galamost</h3>
+<p>如果你想使用S1、G1、G2中的galamost，只需要在你个人的环境变量中添加：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export PATH=/opt/galamost4/bin:$PATH</span><br></pre></td></tr></table></figure>
+<p><strong><mark><font color="purple">(待补事项，全局的HOOMD-blue、LAMMPS的安装，以便让大家直接调用)</font></mark></strong></p>
+<h3 id="2-4-把任务放到后台">2.4 把任务放到后台</h3>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$nohup *** &gt; *** &amp;</span><br></pre></td></tr></table></figure>
 <p>nohup = no hang up</p>
 <p>第一个***表示你的任务</p>
 <p>第二个***表示你想输出到哪个文件中</p>
-<h5 id="1-6-2-一些linux或者shell的使用">1.6.2 一些linux或者shell的使用</h5>
-<p>可以参见 <a href="https://maojinyuan.github.io/2019/12/26/%E8%AE%A9%E6%88%91%E7%9C%8B%E7%9C%8B%E6%98%AF%E5%93%AA%E4%BD%8D%E5%8D%9A%E5%A3%AB%E7%A7%83%E5%A4%B4%E4%BA%86/20190918Shell%20&amp;%20Linux/" target="_blank" rel="noopener">https://maojinyuan.github.io/2019/12/26/%E8%AE%A9%E6%88%91%E7%9C%8B%E7%9C%8B%E6%98%AF%E5%93%AA%E4%BD%8D%E5%8D%9A%E5%A3%AB%E7%A7%83%E5%A4%B4%E4%BA%86/20190918Shell%20&amp;%20Linux/</a></p>
-<h5 id="1-6-3-禁用conda">1.6.3 禁用conda</h5>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conda config --set auto_activate_base false</span><br></pre></td></tr></table></figure>
-<p>(打开只需要把false改成true就行了)</p>
-<h1>2 服务器一些常见使用</h1>
-<h2 id="2-1">2.1</h2>
+<p>例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$nohup python test.py &gt; data.log &amp;</span><br></pre></td></tr></table></figure>
+<p>当然，这还有另外一种用法：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$nohup python test.py 1&gt;data.log 2&gt;err.log &amp;</span><br></pre></td></tr></table></figure>
+<p>这命令表示，提交test.py脚本到后端运行，且把输出文件输出到data.log，如果程序运行失败，那么把报错信息输出到err.log文件中。</p>
+<h3 id="2-5-一些linux或者shell的使用-vim等">2.5 一些linux或者shell的使用(vim等)</h3>
+<p>可以参见<a href="https://maojinyuan.github.io/2019/12/26/%E8%AE%A9%E6%88%91%E7%9C%8B%E7%9C%8B%E6%98%AF%E5%93%AA%E4%BD%8D%E5%8D%9A%E5%A3%AB%E7%A7%83%E5%A4%B4%E4%BA%86/20190918Shell%20&amp;%20Linux/" target="_blank" rel="noopener">这里</a>，不再累赘。</p>
+<h3 id="2-6-cuda的设定">2.6 cuda的设定</h3>
 <p>S1(3080ti)的服务器cuda有装3个版本(10.2, 11.4, 11.5)，如果你有依赖cuda版本安装的软件，可以在环境变量中设置：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">export PATH=/usr/local/cuda-10.2/bin:$PATH</span><br><span class="line">export LD_LIBRARY_PATH=/usr/local/cuda-10.2/lib64:$LD_LIBRARY_PATH</span><br></pre></td></tr></table></figure>
 <p>需要用哪个版本，取决于你自己，比如我想用11.4的版本，只需要将上面两行中的10.2改成11.4即可。</p>
-<h2 id="2-2">2.2</h2>
-<p>如果你想使用S1中的galamost，只需要在你个人的环境变量中添加：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export PATH=/opt/galamost4/bin:$PATH</span><br></pre></td></tr></table></figure>
-<h2 id="2-3">2.3</h2>
+<p>而G1和G2就只有一个cuda11.5的版本。</p>
 <h1>3</h1>
-<p>(p.s. 该文档整理会暂时更新在这里，但长期更新在<a href="https://maojinyuan.github.io" target="_blank" rel="noopener">https://maojinyuan.github.io</a>)</p>
+<p>(p.s. 该文档整理会长期更新在<a href="https://maojinyuan.github.io/2022/01/07/%E8%AE%A9%E6%88%91%E7%9C%8B%E7%9C%8B%E6%98%AF%E5%93%AA%E4%BD%8D%E5%8D%9A%E5%A3%AB%E7%A7%83%E5%A4%B4%E4%BA%86/20220107%E8%BD%AF%E4%BB%B6%E5%AE%89%E8%A3%85/#1-%E8%BD%AF%E4%BB%B6%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B" target="_blank" rel="noopener">这里</a>)</p>
 
         </div>
 
