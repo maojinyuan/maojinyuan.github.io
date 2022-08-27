@@ -387,10 +387,19 @@
         </header>
 
         <div class="post-content">
-            <h3 id="numpy数组不使用科学计数法显示">Numpy数组不使用科学计数法显示</h3>
+            <h3 id="找两个数组公共的元素">找两个数组公共的元素</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">np.intersect1d(Z1,Z2)</span><br></pre></td></tr></table></figure>
+<h3 id="填充数组的边界">填充数组的边界</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Z = np.pad(np.ones((5, 5)), pad_width=1, mode=&apos;constant&apos;, constant_values=0) //表示用0给边界镶值，不难发现Z.shape=(7,7)</span><br><span class="line">print(Z)</span><br></pre></td></tr></table></figure>
+<h3 id="创建一个3x3的单位矩阵">创建一个3x3的单位矩阵</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">np.eye(3)</span><br></pre></td></tr></table></figure>
+<h3 id="找非零元素位置索引">找非零元素位置索引</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">nz = np.nonzero([1, 2, 0, 0, 4, 0])</span><br><span class="line">print(nz)</span><br></pre></td></tr></table></figure>
+<h3 id="numpy数组不使用科学计数法显示">Numpy数组不使用科学计数法显示</h3>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">np.set_printoptions(suppress=True)</span><br></pre></td></tr></table></figure>
 <h3 id="numpy数组-reshape">Numpy数组 reshape</h3>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls_reshape = np.reshape(a, (row, column))# a=列表, 当不确定有多少行或者多少列的时候,填-1</span><br></pre></td></tr></table></figure>
+
         </div>
 
         
@@ -424,7 +433,7 @@
                 <a class="prev" rel="prev" href="/2021/12/19/随笔/20211219小记二三事/">小记二三事</a>
             
             
-            <a class="next" rel="next" href="/2021/12/03/让我看看是哪位博士秃头了/20211203matplotlib命令/">matplotlib常用知识</a>
+            <a class="next" rel="next" href="/2021/12/03/让我看看是哪位博士秃头了/20211203conda常用命令/">conda常用命令</a>
             
         </section>
 
